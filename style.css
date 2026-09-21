@@ -1,0 +1,106 @@
+* { box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+body { margin: 0; padding: 20px; background-color: #2e2c2a; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+
+.sikiro-app {
+  width: 100%; max-width: 950px; background-color: #1f1e1c; border: 1px solid #4a4744;
+  border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.header-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #4a4744; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+}
+
+.brand-title { font-family: 'Oswald', sans-serif; font-size: 26px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0; }
+.role-badge { background-color: #3a3835; border: 1px solid #8c8882; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+.hidden { display: none !important; }
+
+.box-container {
+  max-width: 450px; margin: 20px auto; background-color: #2e2c2a; padding: 25px;
+  border-radius: 10px; border: 1px solid #4a4744; text-align: left;
+}
+.box-container h3 { font-family: 'Oswald', sans-serif; font-size: 22px; margin-top: 0; text-transform: uppercase; text-align: center; }
+
+.tab-container {
+  display: flex; background-color: #1f1e1c; border-radius: 6px; padding: 4px; margin-bottom: 20px; border: 1px solid #4a4744;
+}
+.tab-btn {
+  flex: 1; padding: 8px; background: transparent; border: none; color: #aaaaaa;
+  font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px;
+  text-transform: uppercase; cursor: pointer; border-radius: 4px; transition: all 0.2s ease;
+}
+.tab-btn.active { background-color: #ffffff; color: #1f1e1c; font-weight: 600; }
+
+.input-group { margin-bottom: 14px; text-align: left; }
+.input-group label { display: block; font-size: 11px; color: #bbbbbb; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.role-selector { display: flex; gap: 10px; }
+.role-option {
+  flex: 1; padding: 10px; background-color: #1f1e1c; border: 1px solid #4a4744;
+  border-radius: 6px; color: #aaaaaa; font-size: 13px; text-align: center; cursor: pointer; user-select: none; transition: all 0.2s;
+}
+.role-option.active { border-color: #ffffff; color: #ffffff; background-color: #3a3835; font-weight: bold; }
+
+.password-wrapper { position: relative; display: flex; align-items: center; }
+input, textarea {
+  width: 100%; padding: 12px 14px; background-color: #1f1e1c; border: 1px solid #4a4744;
+  border-radius: 6px; color: #ffffff; font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+input[type="password"], input[type="text"] { padding-right: 40px; }
+input:focus, textarea:focus { border-color: #8c8882; }
+
+.toggle-password {
+  position: absolute; right: 12px; background: none; border: none; color: #888888; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
+}
+.toggle-password:hover { color: #ffffff; }
+
+.btn-sikiro {
+  width: 100%; padding: 13px; background-color: #ffffff; color: #1f1e1c; border: none;
+  border-radius: 6px; font-family: 'Oswald', sans-serif; font-size: 16px; letter-spacing: 1px;
+  text-transform: uppercase; font-weight: 600; cursor: pointer; margin-top: 12px; transition: background-color 0.2s;
+}
+.btn-sikiro:hover { background-color: #e0e0e0; }
+
+.btn-logout { background-color: #1f1e1c; color: #ffffff; border: 1px solid #4a4744; font-size: 12px; padding: 6px 12px; width: auto; margin: 0; }
+.btn-logout:hover { background-color: #3d3a37; border-color: #8c8882; }
+
+#error-message { color: #ff6b6b; font-size: 13px; margin-top: 12px; }
+
+.live-dashboard { background-color: #f4f6f8; color: #1f1e1c; border-radius: 10px; padding: 20px; text-align: left; }
+.live-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; margin-bottom: 20px; }
+.code-box { background-color: #ffffff; border: 2px dashed #007bff; padding: 8px 16px; border-radius: 8px; text-align: center; }
+.code-box strong { font-family: 'Oswald', sans-serif; font-size: 22px; color: #007bff; letter-spacing: 2px; }
+
+.metrics-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.metric-card { background: #ffffff; border-radius: 8px; padding: 15px; border: 1px solid #e0e0e0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+.metric-title { font-size: 11px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
+.metric-num { font-size: 22px; font-weight: bold; color: #1f1e1c; }
+
+.controls-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.btn-act { padding: 10px 16px; border-radius: 6px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
+.btn-quiz { background-color: #007bff; color: white; }
+.btn-pause { background-color: #ffc107; color: #1f1e1c; }
+.btn-stop { background-color: #dc3545; color: white; }
+
+.questions-box { background: #ffffff; border-radius: 8px; padding: 15px; border: 1px solid #e0e0e0; }
+.questions-box h4 { margin: 0 0 10px 0; font-size: 14px; color: #333; }
+.q-item { background-color: #eef5ff; border-left: 4px solid #007bff; padding: 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; color: #222; }
+
+.student-dashboard { background-color: #f4f6f8; color: #1f1e1c; border-radius: 10px; padding: 20px; text-align: left; }
+.student-card { background: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e0e0e0; margin-bottom: 15px; }
+.student-card h4 { margin-top: 0; font-size: 16px; color: #333; }
+textarea { resize: vertical; min-height: 80px; font-size: 14px; margin-bottom: 10px; }
+
+.rhythm-options { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.rhythm-btn {
+  flex: 1; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;
+  border-radius: 6px; font-size: 13px; cursor: pointer; text-align: center;
+}
+.rhythm-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+
+.summary-view { text-align: left; }
+.summary-view h3 { font-family: 'Oswald', sans-serif; font-size: 26px; text-transform: uppercase; margin-top: 0; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+.sum-item { background-color: #2e2c2a; border: 1px solid #4a4744; padding: 15px; border-radius: 8px; }
+.sum-item label { display: block; font-size: 11px; color: #aaa; text-transform: uppercase; }
+.sum-item span { font-size: 16px; font-weight: bold; color: #ffffff; }
