@@ -3,17 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIKIRO - Plataforma Interactiva</title>
+  <title>SIKIRO - Anfitrión y Aulas Interactivas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  
-  <!-- Estilos CSS -->
-  <link rel="stylesheet" href="style.css">
 
-  <!-- SDKs Firebase (Compat) -->
+  <!-- SDKs Firebase Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+    body { margin: 0; padding: 15px; background-color: #2e2c2a; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+
+    .sikiro-app {
+      width: 100%; max-width: 950px; background-color: #1f1e1c; border: 1px solid #4a4744;
+      border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #4a4744; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+
+    .brand-title { font-family: 'Oswald', sans-serif; font-size: 26px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0; }
+    .role-badge { background-color: #3a3835; border: 1px solid #8c8882; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .hidden { display: none !important; }
+
+    .box-container {
+      max-width: 450px; margin: 20px auto; background-color: #2e2c2a; padding: 25px;
+      border-radius: 10px; border: 1px solid #4a4744; text-align: left;
+    }
+    .box-container h3 { font-family: 'Oswald', sans-serif; font-size: 22px; margin-top: 0; text-transform: uppercase; text-align: center; }
+
+    .tab-container {
+      display: flex; background-color: #1f1e1c; border-radius: 6px; padding: 4px; margin-bottom: 20px; border: 1px solid #4a4744;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px; background: transparent; border: none; color: #aaaaaa;
+      font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px; transition: all 0.2s ease;
+    }
+    .tab-btn.active { background-color: #ffffff; color: #1f1e1c; font-weight: 600; }
+
+    .input-group { margin-bottom: 14px; text-align: left; }
+    .input-group label { display: block; font-size: 11px; color: #bbbbbb; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .role-selector { display: flex; gap: 10px; }
+    .role-option {
+      flex: 1; padding: 10px; background-color: #1f1e1c; border: 1px solid #4a4744;
+      border-radius: 6px; color: #aaaaaa; font-size: 13px; text-align: center; cursor: pointer; user-select: none; transition: all 0.2s;
+    }
+    .role-option.active { border-color: #ffffff; color: #ffffff; background-color: #3a3835; font-weight: bold; }
+
+    .password-wrapper { position: relative; display: flex; align-items: center; }
+    input, textarea {
+      width: 100%; padding: 12px 14px; background-color: #1f1e1c; border: 1px solid #4a4744;
+      border-radius: 6px; color: #ffffff; font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    input[type="password"], input[type="text"] { padding-right: 40px; }
+    input:focus, textarea:focus { border-color: #8c8882; }
+
+    .toggle-password {
+      position: absolute; right: 12px; background: none; border: none; color: #888888; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .toggle-password:hover { color: #ffffff; }
+
+    .btn-sikiro {
+      width: 100%; padding: 13px; background-color: #ffffff; color: #1f1e1c; border: none;
+      border-radius: 6px; font-family: 'Oswald', sans-serif; font-size: 16px; letter-spacing: 1px;
+      text-transform: uppercase; font-weight: 600; cursor: pointer; margin-top: 12px; transition: background-color 0.2s;
+    }
+    .btn-sikiro:hover { background-color: #e0e0e0; }
+
+    .btn-logout { background-color: #1f1e1c; color: #ffffff; border: 1px solid #4a4744; font-size: 12px; padding: 6px 12px; width: auto; margin: 0; }
+    .btn-logout:hover { background-color: #3d3a37; border-color: #8c8882; }
+
+    #error-message { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; }
+
+    /* PANEL DOCENTE / ANFITRIÓN EN VIVO */
+    .live-dashboard { background-color: #f4f6f8; color: #1f1e1c; border-radius: 10px; padding: 20px; text-align: left; }
+    .live-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; margin-bottom: 20px; }
+    
+    .code-box { background-color: #ffffff; border: 2px dashed #007bff; padding: 8px 16px; border-radius: 8px; text-align: center; }
+    .code-box strong { font-family: 'Oswald', sans-serif; font-size: 22px; color: #007bff; letter-spacing: 2px; }
+
+    .metrics-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .metric-card { background: #ffffff; border-radius: 8px; padding: 15px; border: 1px solid #e0e0e0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    .metric-title { font-size: 11px; color: #777; text-transform: uppercase; margin-bottom: 5px; }
+    .metric-num { font-size: 22px; font-weight: bold; color: #1f1e1c; }
+
+    .controls-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .btn-act { padding: 10px 16px; border-radius: 6px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .btn-quiz { background-color: #007bff; color: white; }
+    .btn-pause { background-color: #ffc107; color: #1f1e1c; }
+    .btn-stop { background-color: #dc3545; color: white; }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+    .panel-box { background: #ffffff; border-radius: 8px; padding: 15px; border: 1px solid #e0e0e0; }
+    .panel-box h4 { margin: 0 0 10px 0; font-size: 14px; color: #333; }
+    
+    .q-item { background-color: #eef5ff; border-left: 4px solid #007bff; padding: 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; color: #222; }
+    .student-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; color: #333; }
+    .btn-kick { background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
+    /* PANEL ESTUDIANTE / SALA DE ESPERA */
+    .student-dashboard { background-color: #f4f6f8; color: #1f1e1c; border-radius: 10px; padding: 20px; text-align: left; }
+    .student-card { background: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e0e0e0; margin-bottom: 15px; }
+    .student-card h4 { margin-top: 0; font-size: 16px; color: #333; }
+    textarea { resize: vertical; min-height: 80px; font-size: 14px; margin-bottom: 10px; }
+
+    .rhythm-options { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .rhythm-btn {
+      flex: 1; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;
+      border-radius: 6px; font-size: 13px; cursor: pointer; text-align: center;
+    }
+    .rhythm-btn.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+
+    /* RESUMEN FINAL */
+    .summary-view { text-align: left; }
+    .summary-view h3 { font-family: 'Oswald', sans-serif; font-size: 26px; text-transform: uppercase; margin-top: 0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    .sum-item { background-color: #2e2c2a; border: 1px solid #4a4744; padding: 15px; border-radius: 8px; }
+    .sum-item label { display: block; font-size: 11px; color: #aaa; text-transform: uppercase; }
+    .sum-item span { font-size: 16px; font-weight: bold; color: #ffffff; }
+  </style>
 </head>
 <body>
 
@@ -26,7 +142,7 @@
       </div>
     </div>
 
-    <!-- MÓDULO DE ACCESO / LOGIN -->
+    <!-- AUTENTICACIÓN -->
     <div id="auth-view" class="box-container">
       <h3 id="form-title">CREAR CUENTA</h3>
       
@@ -37,9 +153,9 @@
 
       <form id="sikiro-form" onsubmit="handleAuth(event)">
         <div class="input-group" id="role-group">
-          <label>TIPO DE USUARIO</label>
+          <label>TIPO DE USUARIO (Una vez creado no se puede cambiar)</label>
           <div class="role-selector">
-            <div class="role-option active" id="role-docente" onclick="selectRole('Docente')">🍎 Docente</div>
+            <div class="role-option active" id="role-docente" onclick="selectRole('Docente')">🍎 Docente (Anfitrión)</div>
             <div class="role-option" id="role-estudiante" onclick="selectRole('Estudiante')">🎓 Estudiante</div>
           </div>
         </div>
@@ -53,7 +169,7 @@
           <label for="password">Contraseña</label>
           <div class="password-wrapper">
             <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
-            <button type="button" class="toggle-password" onclick="togglePassword()" title="Mostrar/Ocultar">
+            <button type="button" class="toggle-password" onclick="togglePassword()" title="Mostrar/Ocultar contraseña">
               <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -68,21 +184,25 @@
       <p id="error-message"></p>
     </div>
 
-    <!-- VISTA DOCENTE -->
+
+    <!-- VISTA DOCENTE / ANFITRIÓN -->
     <div id="teacher-view" class="hidden">
+      <!-- CONFIGURAR SALA -->
       <div id="t-setup" class="box-container" style="max-width: 500px;">
-        <h3>Configurar Clase en Vivo</h3>
+        <h3>Crear Sala de Anfitrión</h3>
+        <p style="font-size:12px; color:#bbb; text-align:center; margin-bottom:15px;">Inicia una sesión en vivo para que los estudiantes puedan unirse mediante un código único.</p>
         <div class="input-group">
           <label>Asignatura / Curso</label>
-          <input type="text" id="t-subject" placeholder="Ej. Matemática - Tercero A">
+          <input type="text" id="t-subject" placeholder="Ej. Física - Cuarto Año">
         </div>
         <div class="input-group">
           <label>Tema de la Sesión</label>
-          <input type="text" id="t-topic" placeholder="Ej. Ecuaciones Cuadráticas">
+          <input type="text" id="t-topic" placeholder="Ej. Leyes de Newton">
         </div>
-        <button class="btn-sikiro" onclick="startTeacherClass()">INICIAR CLASE</button>
+        <button class="btn-sikiro" onclick="startTeacherClass()">ABRIR SALA EN VIVO</button>
       </div>
 
+      <!-- PANEL DE CONTROL DEL ANFITRIÓN -->
       <div id="t-live" class="live-dashboard hidden">
         <div class="live-header">
           <div>
@@ -90,82 +210,102 @@
             <h2 id="t-live-topic" style="margin: 5px 0 0 0; font-size:22px;"></h2>
           </div>
           <div class="code-box">
-            <span style="font-size:10px; color:#555; display:block;">CÓDIGO DE ACCESO</span>
+            <span style="font-size:10px; color:#555; display:block;">CÓDIGO DE ANFITRIÓN</span>
             <strong id="t-live-code">------</strong>
           </div>
         </div>
 
         <div class="metrics-container">
           <div class="metric-card">
-            <div class="metric-title">Tiempo Transcurrido</div>
+            <div class="metric-title">Tiempo en Vivo</div>
             <div class="metric-num" id="t-timer">00:00:00</div>
           </div>
           <div class="metric-card">
-            <div class="metric-title">Alumnos Conectados</div>
-            <div class="metric-num" id="t-students">0 Alumnos</div>
+            <div class="metric-title">Estudiantes Conectados</div>
+            <div class="metric-num" id="t-students-count">0 Alumnos</div>
           </div>
           <div class="metric-card">
-            <div class="metric-title">Dudas Anónimas</div>
+            <div class="metric-title">Dudas Recibidas</div>
             <div class="metric-num" style="color:#007bff;" id="t-q-count">0 Recibidas</div>
           </div>
           <div class="metric-card">
-            <div class="metric-title">Ritmo del Aula</div>
+            <div class="metric-title">Ritmo General</div>
             <div class="metric-num" style="color:#28a745;" id="t-rhythm-status">Adecuado</div>
           </div>
         </div>
 
         <div class="controls-bar">
-          <button class="btn-act btn-quiz" onclick="alert('⚡ Quiz relámpago enviado a los dispositivos.')">⚡ Lanzar Quiz Relámpago</button>
-          <button class="btn-act btn-pause" id="t-btn-pause" onclick="toggleTeacherPause()">⏸️ Pausar Clase</button>
-          <button class="btn-act btn-stop" onclick="finishTeacherClass()">🛑 Finalizar Clase</button>
+          <button class="btn-act btn-quiz" onclick="alert('⚡ Quiz relámpago transmitido a los dispositivos de los estudiantes en la sala.')">⚡ Lanzar Quiz Relámpago</button>
+          <button class="btn-act btn-pause" id="t-btn-pause" onclick="toggleTeacherPause()">⏸️ Pausar Sala</button>
+          <button class="btn-act btn-stop" onclick="finishTeacherClass()">🛑 Finalizar Sala (Meet)</button>
         </div>
 
-        <div class="questions-box">
-          <h4>💬 Preguntas Anónimas en Tiempo Real:</h4>
-          <div id="t-questions-list">
-            <p style="font-size: 12px; color: #888; margin: 5px 0;">Esperando preguntas anónimas del aula...</p>
+        <div class="dashboard-grid">
+          <!-- Control de Estudiantes (Estilo Meet) -->
+          <div class="panel-box">
+            <h4>👥 Estudiantes en la Sala (<span id="t-list-count">0</span>)</h4>
+            <div id="t-students-list" style="max-height: 150px; overflow-y: auto;">
+              <p style="font-size: 12px; color: #888;">Ningún estudiante conectado todavía...</p>
+            </div>
+          </div>
+
+          <!-- Buzón de Preguntas Anónimas -->
+          <div class="panel-box">
+            <h4>💬 Dudas Anónimas del Aula:</h4>
+            <div id="t-questions-list" style="max-height: 150px; overflow-y: auto;">
+              <p style="font-size: 12px; color: #888;">Esperando preguntas anónimas...</p>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- RESUMEN FINAL -->
       <div id="t-summary" class="summary-view hidden">
-        <h3>Resumen Consolidado de la Clase</h3>
-        <p style="color:#ccc; font-size:13px;">Informe estadístico generado automáticamente al concluir la sesión.</p>
+        <h3>Informe de la Sala de Anfitrión</h3>
+        <p style="color:#ccc; font-size:13px;">Resumen generado automáticamente al cerrar la sesión en vivo.</p>
         <div class="summary-grid">
           <div class="sum-item"><label>Asignatura</label><span id="sum-sub"></span></div>
           <div class="sum-item"><label>Tema</label><span id="sum-top"></span></div>
           <div class="sum-item"><label>Código</label><span id="sum-cod"></span></div>
           <div class="sum-item"><label>Duración</label><span id="sum-dur"></span></div>
-          <div class="sum-item"><label>Asistencia Total</label><span id="sum-stu"></span></div>
-          <div class="sum-item"><label>Salud del Aula</label><span style="color:#6bff94;">92 / 100</span></div>
+          <div class="sum-item"><label>Participación Total</label><span id="sum-stu"></span></div>
+          <div class="sum-item"><label>Calidad del Aula</label><span style="color:#6bff94;">95 / 100</span></div>
         </div>
-        <button class="btn-sikiro" onclick="resetTeacherDemo()">CREAR OTRA CLASE</button>
+        <button class="btn-sikiro" onclick="resetTeacherDemo()">CREAR NUEVA SALA</button>
       </div>
     </div>
 
+
     <!-- VISTA ESTUDIANTE -->
     <div id="student-view" class="hidden">
+      <!-- INGRESAR A SALA -->
       <div id="s-join" class="box-container" style="max-width: 450px;">
-        <h3>Unirse a una Clase</h3>
+        <h3>Unirse a la Sala del Docente</h3>
+        <p style="font-size:12px; color:#bbb; text-align:center; margin-bottom:15px;">Ingresa tu nombre o apodo para que el anfitrión te reconozca en clase.</p>
         <div class="input-group">
-          <label>Ingresa el Código de Clase</label>
-          <input type="text" id="s-input-code" placeholder="Ej. A7B9X2" style="text-transform: uppercase;">
+          <label>Tu Nombre / Alias en el Aula</label>
+          <input type="text" id="s-input-name" placeholder="Ej. Carlos Mendoza">
         </div>
-        <button class="btn-sikiro" onclick="joinStudentClass()">INGRESAR A LA CLASE</button>
+        <div class="input-group">
+          <label>Código de la Sala (Anfitrión)</label>
+          <input type="text" id="s-input-code" placeholder="Ej. B4X8Z1" style="text-transform: uppercase;">
+        </div>
+        <button class="btn-sikiro" onclick="joinStudentClass()">UNIRME A LA CLASE</button>
       </div>
 
+      <!-- CLASE ACTIVA DEL ESTUDIANTE -->
       <div id="s-active" class="student-dashboard hidden">
         <h3 id="s-class-title" style="margin-top:0; font-family:'Oswald',sans-serif; text-transform:uppercase;">Clase en curso</h3>
-        <p style="font-size:12px; color:#666; margin-bottom: 20px;">Conectado de forma <strong>100% Anónima</strong>.</p>
+        <p style="font-size:12px; color:#666; margin-bottom: 20px;">Conectado a la sala del docente con éxito. Tus dudas son <strong>100% anónimas</strong>.</p>
 
         <div class="student-card">
           <h4>🔒 Enviar Pregunta o Duda Anónima</h4>
-          <textarea id="s-question-text" placeholder="Escribe tu pregunta sin temor a ser juzgado... El profesor la responderá en vivo."></textarea>
-          <button class="btn-sikiro" style="padding: 10px;" onclick="sendAnonymousQuestion()">ENVIAR DUDA ANÓNIMA</button>
+          <textarea id="s-question-text" placeholder="Escribe tu consulta para que el anfitrión la responda en vivo..."></textarea>
+          <button class="btn-sikiro" style="padding: 10px;" onclick="sendAnonymousQuestion()">ENVIAR DUDA AL ANFITRIÓN</button>
         </div>
 
         <div class="student-card">
-          <h4>⚡ ¿Cómo sientes el ritmo de la clase?</h4>
+          <h4>⚡ ¿Cómo sientes el ritmo actual de la clase?</h4>
           <div class="rhythm-options">
             <button class="rhythm-btn" onclick="setRhythm('Lento', this)">🐢 Lento</button>
             <button class="rhythm-btn active" onclick="setRhythm('Adecuado', this)">👍 Adecuado</button>
@@ -173,13 +313,348 @@
           </div>
         </div>
 
-        <button class="btn-sikiro" style="background-color: #dc3545; color: white; margin-top: 15px;" onclick="leaveClass()">SALIR DE LA CLASE</button>
+        <button class="btn-sikiro" style="background-color: #dc3545; color: white; margin-top: 15px;" onclick="leaveClass()">ABANDONAR SALA</button>
       </div>
     </div>
 
   </div>
 
-  <!-- Script JavaScript -->
-  <script src="app.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwekJwvDBPi-k1WIr1GUpt1-lQ8yvOO9w",
+      authDomain: "sikiro-f966b.firebaseapp.com",
+      projectId: "sikiro-f966b",
+      storageBucket: "sikiro-f966b.firebasestorage.app",
+      messagingSenderId: "208531942537",
+      appId: "1:208531942537:web:1c6b5cb2728ef3cbedaa58",
+      measurementId: "G-W10N8DBYJ1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    let currentMode = 'register';
+    let selectedRole = 'Docente';
+
+    function switchMode(mode) {
+      currentMode = mode;
+      const title = document.getElementById('form-title');
+      const btn = document.getElementById('btn-action');
+      const roleGroup = document.getElementById('role-group');
+
+      if (mode === 'register') {
+        document.getElementById('tab-register').classList.add('active');
+        document.getElementById('tab-login').classList.remove('active');
+        title.textContent = "CREAR CUENTA";
+        btn.textContent = "REGISTRARSE";
+        roleGroup.classList.remove('hidden');
+      } else {
+        document.getElementById('tab-login').classList.add('active');
+        document.getElementById('tab-register').classList.remove('active');
+        title.textContent = "ACCESO SIKIRO";
+        btn.textContent = "INGRESAR";
+        roleGroup.classList.add('hidden'); // Ocultar selector en login para evitar cambios accidentales
+      }
+      document.getElementById('error-message').textContent = '';
+    }
+
+    function selectRole(role) {
+      selectedRole = role;
+      if (role === 'Docente') {
+        document.getElementById('role-docente').classList.add('active');
+        document.getElementById('role-estudiante').classList.remove('active');
+      } else {
+        document.getElementById('role-estudiante').classList.add('active');
+        document.getElementById('role-docente').classList.remove('active');
+      }
+    }
+
+    function togglePassword() {
+      const pwd = document.getElementById('password');
+      const eye = document.getElementById('eye-icon');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        eye.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+      } else {
+        pwd.type = 'password';
+        eye.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+      }
+    }
+
+    // Manejo de Autenticación con persistencia estricta de Rol por Usuario (Uid)
+    function handleAuth(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const pwd = document.getElementById('password').value;
+      const err = document.getElementById('error-message');
+      err.textContent = '';
+
+      if (currentMode === 'login') {
+        auth.signInWithEmailAndPassword(email, pwd)
+          .then((userCredential) => {
+            // Verificar si el usuario ya tiene un rol grabado asignado en localStorage asociado a este correo
+            let savedRole = localStorage.getItem('sikiro_role_' + userCredential.user.uid);
+            if (!savedRole) {
+              // Si no existe, por defecto se le asigna Docente o Estudiante según ingresó
+              localStorage.setItem('sikiro_role_' + userCredential.user.uid, 'Docente');
+            }
+          })
+          .catch(() => {
+            err.textContent = "Correo o contraseña incorrectos.";
+          });
+      } else {
+        auth.createUserWithEmailAndPassword(email, pwd)
+          .then((userCredential) => {
+            // Guardar permanentemente el rol seleccionado asociado al UID de este usuario específico en el navegador
+            localStorage.setItem('sikiro_role_' + userCredential.user.uid, selectedRole);
+          })
+          .catch((error) => {
+            if (error.code === 'auth/weak-password') err.textContent = "La contraseña debe tener al menos 6 caracteres.";
+            else if (error.code === 'auth/email-already-in-use') err.textContent = "Este correo electrónico ya está registrado.";
+            else err.textContent = "No se pudo realizar el registro.";
+          });
+      }
+    }
+
+    // Vigilar estado de sesión y bloquear rol permanentemente
+    auth.onAuthStateChanged((user) => {
+      const authView = document.getElementById('auth-view');
+      const teacherView = document.getElementById('teacher-view');
+      const studentView = document.getElementById('student-view');
+      const badge = document.getElementById('display-role');
+      const btnLogout = document.getElementById('btn-logout');
+
+      if (user) {
+        authView.classList.add('hidden');
+        btnLogout.classList.remove('hidden');
+
+        // Obtener el rol exacto vinculado a este usuario en específico
+        let assignedRole = localStorage.getItem('sikiro_role_' + user.uid);
+        if (!assignedRole) {
+          assignedRole = 'Docente'; // fallback por seguridad
+          localStorage.setItem('sikiro_role_' + user.uid, assignedRole);
+        }
+
+        badge.textContent = `🍎 Anfitrión / Modo ${assignedRole}`;
+
+        if (assignedRole === 'Docente') {
+          teacherView.classList.remove('hidden');
+          studentView.classList.add('hidden');
+        } else {
+          studentView.classList.remove('hidden');
+          teacherView.classList.add('hidden');
+        }
+      } else {
+        authView.classList.remove('hidden');
+        teacherView.classList.add('hidden');
+        studentView.classList.add('hidden');
+        badge.textContent = 'No conectado';
+        btnLogout.classList.add('hidden');
+      }
+    });
+
+    function logoutUser() {
+      auth.signOut();
+      // Limpiar solo datos temporales de la sala, manteniendo la identidad del usuario a salvo
+      localStorage.removeItem('sikiro_active_code');
+      localStorage.removeItem('sikiro_active_topic');
+      localStorage.removeItem('sikiro_students_list');
+    }
+
+    // ==========================================
+    //       LÓGICA DEL ANFITRIÓN (DOCENTE)
+    // ==========================================
+    let tTimer = null;
+    let tSeconds = 0;
+    let tPaused = false;
+    let activeCode = '';
+    let receivedQuestions = 0;
+
+    function generateCode() {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    }
+
+    function startTeacherClass() {
+      const sub = document.getElementById('t-subject').value.trim();
+      const top = document.getElementById('t-topic').value.trim();
+
+      if (!sub || !top) {
+        alert('Por favor completa la asignatura y el tema.');
+        return;
+      }
+
+      activeCode = generateCode();
+      localStorage.setItem('sikiro_active_code', activeCode);
+      localStorage.setItem('sikiro_active_topic', `${sub} - ${top}`);
+      localStorage.setItem('sikiro_students_list', JSON.stringify([])); // Iniciar lista de estudiantes vacía
+
+      document.getElementById('t-live-subject').textContent = sub;
+      document.getElementById('t-live-topic').textContent = top;
+      document.getElementById('t-live-code').textContent = activeCode;
+
+      document.getElementById('t-setup').classList.add('hidden');
+      document.getElementById('t-live').classList.remove('hidden');
+
+      tSeconds = 0;
+      clearInterval(tTimer);
+      tTimer = setInterval(() => {
+        if (!tPaused) {
+          tSeconds++;
+          const h = Math.floor(tSeconds / 3600);
+          const m = Math.floor((tSeconds % 3600) / 60);
+          const s = tSeconds % 60;
+          document.getElementById('t-timer').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+          
+          syncHostRealtime();
+        }
+      }, 1000);
+    }
+
+    function syncHostRealtime() {
+      // Sincronizar lista de estudiantes unidos tipo Meet
+      const studentsData = JSON.parse(localStorage.getItem('sikiro_students_list') || '[]');
+      document.getElementById('t-students-count').textContent = `${studentsData.length} ${studentsData.length === 1 ? 'Alumno' : 'Alumnos'}`;
+      document.getElementById('t-list-count').textContent = studentsData.length;
+
+      const listContainer = document.getElementById('t-students-list');
+      if (studentsData.length === 0) {
+        listContainer.innerHTML = `<p style="font-size: 12px; color: #888;">Esperando que los estudiantes se unan con el código...</p>`;
+      } else {
+        let html = '';
+        studentsData.forEach((st, idx) => {
+          html += `<div class="student-row">
+            <span>🎓 <strong>${st}</strong></span>
+            <button class="btn-kick" onclick="kickStudent(${idx})">Expulsar</button>
+          </div>`;
+        });
+        listContainer.innerHTML = html;
+      }
+
+      // Sincronizar preguntas anónimas
+      const latestQ = localStorage.getItem('sikiro_last_question');
+      if (latestQ && latestQ !== window.lastDisplayedQ) {
+        window.lastDisplayedQ = latestQ;
+        receivedQuestions++;
+        document.getElementById('t-q-count').textContent = `${receivedQuestions} Recibidas`;
+
+        const qList = document.getElementById('t-questions-list');
+        const emptyMsg = qList.querySelector('p');
+        if (emptyMsg) emptyMsg.remove();
+
+        const div = document.createElement('div');
+        div.className = 'q-item';
+        div.innerHTML = `🔒 <em>Anónimo:</em> ${latestQ}`;
+        qList.prepend(div);
+      }
+
+      const currentRhythm = localStorage.getItem('sikiro_rhythm') || 'Adecuado';
+      document.getElementById('t-rhythm-status').textContent = currentRhythm;
+    }
+
+    function kickStudent(index) {
+      let studentsData = JSON.parse(localStorage.getItem('sikiro_students_list') || '[]');
+      studentsData.splice(index, 1);
+      localStorage.setItem('sikiro_students_list', JSON.stringify(studentsData));
+    }
+
+    function toggleTeacherPause() {
+      tPaused = !tPaused;
+      const btn = document.getElementById('t-btn-pause');
+      btn.textContent = tPaused ? '▶️ Reanudar Sala' : '⏸️ Pausar Sala';
+    }
+
+    function finishTeacherClass() {
+      clearInterval(tTimer);
+      document.getElementById('sum-sub').textContent = document.getElementById('t-live-subject').textContent;
+      document.getElementById('sum-top').textContent = document.getElementById('t-live-topic').textContent;
+      document.getElementById('sum-cod').textContent = activeCode;
+      document.getElementById('sum-dur').textContent = document.getElementById('t-timer').textContent;
+      document.getElementById('sum-stu').textContent = document.getElementById('t-students-count').textContent;
+
+      document.getElementById('t-live').classList.add('hidden');
+      document.getElementById('t-summary').classList.remove('hidden');
+      localStorage.removeItem('sikiro_active_code');
+    }
+
+    function resetTeacherDemo() {
+      localStorage.removeItem('sikiro_active_code');
+      localStorage.removeItem('sikiro_active_topic');
+      localStorage.removeItem('sikiro_students_list');
+      document.getElementById('t-subject').value = '';
+      document.getElementById('t-topic').value = '';
+      document.getElementById('t-summary').classList.add('hidden');
+      document.getElementById('t-setup').classList.remove('hidden');
+    }
+
+
+    // ==========================================
+    //       LÓGICA DEL ESTUDIANTE
+    // ==========================================
+    let myStudentName = '';
+
+    function joinStudentClass() {
+      const nameInput = document.getElementById('s-input-name').value.trim();
+      const codeInput = document.getElementById('s-input-code').value.trim().toUpperCase();
+      const hostCode = localStorage.getItem('sikiro_active_code');
+
+      if (!nameInput) {
+        alert('Por favor escribe tu nombre o alias.');
+        return;
+      }
+      if (!codeInput || codeInput !== hostCode) {
+        alert('El código de la sala es incorrecto o la sesión del anfitrión no está activa.');
+        return;
+      }
+
+      myStudentName = nameInput;
+      let studentsData = JSON.parse(localStorage.getItem('sikiro_students_list') || '[]');
+      if (!studentsData.includes(myStudentName)) {
+        studentsData.push(myStudentName);
+        localStorage.setItem('sikiro_students_list', JSON.stringify(studentsData));
+      }
+
+      const topicInfo = localStorage.getItem('sikiro_active_topic') || 'Sala en Vivo Sikiro';
+      document.getElementById('s-class-title').textContent = `Sala: ${topicInfo}`;
+
+      document.getElementById('s-join').classList.add('hidden');
+      document.getElementById('s-active').classList.remove('hidden');
+    }
+
+    function sendAnonymousQuestion() {
+      const text = document.getElementById('s-question-text').value.trim();
+      if (!text) {
+        alert('Escribe tu pregunta antes de enviar.');
+        return;
+      }
+
+      localStorage.setItem('sikiro_last_question', text);
+      alert('🔒 Tu duda ha sido enviada de forma 100% anónima al anfitrión.');
+      document.getElementById('s-question-text').value = '';
+    }
+
+    function setRhythm(rhythmValue, btnElement) {
+      const parent = btnElement.parentElement;
+      parent.querySelectorAll('.rhythm-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      localStorage.setItem('sikiro_rhythm', rhythmValue);
+    }
+
+    function leaveClass() {
+      if (myStudentName) {
+        let studentsData = JSON.parse(localStorage.getItem('sikiro_students_list') || '[]');
+        studentsData = studentsData.filter(s => s !== myStudentName);
+        localStorage.setItem('sikiro_students_list', JSON.stringify(studentsData));
+      }
+
+      document.getElementById('s-active').classList.add('hidden');
+      document.getElementById('s-join').classList.remove('hidden');
+    }
+  </script>
 </body>
 </html>
