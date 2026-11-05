@@ -8,7 +8,7 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Supabase JS Client SDK (CRÍTICO PARA QUE FUNCIONE) -->
+  <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Tipografías: Sora (Display) e Inter (Cuerpo) -->
@@ -91,7 +91,7 @@
       </div>
     </section>
 
-    <!-- PANTALLA 2: AUTENTICACIÓN DOCENTE -->
+    <!-- PANTALLA 2: AUTENTICACIÓN DOCENTE (CON PESTAÑAS LOGIN/REGISTRO Y GOOGLE) -->
     <section id="screen-teacher-auth" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto space-y-6">
       <div class="flex justify-between items-center">
         <button type="button" onclick="showScreen('role-selector')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Cambiar rol</button>
@@ -113,29 +113,20 @@
         </button>
       </div>
 
-      <form onsubmit="handleTeacherAuth(event)" class="space-y-4">
-        <div id="teacher-name-container" class="hidden">
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre Completo del Profesor</label>
-          <input type="text" id="teacher-name" placeholder="Prof. Carlos Mendoza" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Electrónico</label>
-          <input type="email" id="teacher-email" required placeholder="docente@colegio.edu" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
-          <input type="password" id="teacher-password" required placeholder="••••••••" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-        </div>
-
-        <button type="submit" id="teacher-submit-btn" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3.5 rounded-full text-sm transition shadow-md">
-          Iniciar Sesión
+      <div class="space-y-4 pt-2">
+        <button type="button" onclick="handleGoogleLogin()" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-bold py-3.5 px-4 rounded-full text-sm transition border border-slate-300 shadow-sm">
+          <svg class="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.15 21.32 7.23 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.14 0 9.87 0 12s.43 3.86 1.18 5.38l4.09-3.14z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.15 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/>
+          </svg>
+          Continuar con Google
         </button>
-      </form>
+      </div>
     </section>
 
-    <!-- PANTALLA 3: AUTENTICACIÓN ALUMNO (SIN SOLICITAR NOMBRE) -->
+    <!-- PANTALLA 3: AUTENTICACIÓN ALUMNO -->
     <section id="screen-student-auth" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto space-y-6">
       <div class="flex justify-between items-center">
         <button type="button" onclick="showScreen('role-selector')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Cambiar rol</button>
@@ -144,36 +135,12 @@
 
       <div class="text-center space-y-1">
         <h2 id="student-auth-title" class="font-display font-bold text-xl text-slate-900">Acceso Alumno</h2>
-        <p class="text-xs text-slate-500">Participación confidencial sin solicitar tu nombre.</p>
+        <p class="text-xs text-slate-500">Participación confidencial para tu clase.</p>
       </div>
 
-      <!-- PESTAÑAS LOGIN / REGISTRO / CÓDIGO -->
-      <div class="flex bg-slate-100 p-1 rounded-full border border-slate-200">
-        <button type="button" onclick="switchStudentTab('login')" id="tab-student-login" class="flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition">
-          Iniciar Sesión
-        </button>
-        <button type="button" onclick="switchStudentTab('register')" id="tab-student-register" class="flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition">
-          Crear Cuenta
-        </button>
-        <button type="button" onclick="switchStudentTab('code')" id="tab-student-code" class="flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition">
-          Código
-        </button>
-      </div>
-
-      <form onsubmit="handleStudentAuth(event)" class="space-y-4">
-        <div id="student-credentials-container" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Electrónico (Opcional)</label>
-            <input type="email" id="student-email" placeholder="alumno@colegio.edu" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
-            <input type="password" id="student-password" placeholder="••••••••" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
-          </div>
-        </div>
-
+      <form onsubmit="handleStudentAuth(event)" class="space-y-4 pt-4">
         <button type="submit" id="student-submit-btn" class="w-full bg-brand-green hover:bg-green-700 text-white font-bold py-3.5 rounded-full text-sm transition shadow-md">
-          Continuar
+          Ingresar con Código de Clase
         </button>
       </form>
     </section>
@@ -218,7 +185,6 @@
           <h2 id="display-course-topic" class="font-display font-bold text-2xl text-slate-900 mt-1">Curso - Tema</h2>
         </div>
 
-        <!-- CONTROLES DE INICIAR Y FINALIZAR CLASE -->
         <div class="flex items-center gap-2">
           <button type="button" id="btn-start-class" onclick="toggleStartClass()" class="bg-brand-green hover:bg-green-700 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-md">
             ▶ Iniciar Clase
@@ -229,7 +195,6 @@
         </div>
       </div>
 
-      <!-- MÉTRICAS EN VIVO: ALUMNOS, TIEMPO, RITMO Y COMPRENSIÓN -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="stat-students-count" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
@@ -249,7 +214,6 @@
         </div>
       </div>
 
-      <!-- PREGUNTAS / DUDAS ANÓNIMAS -->
       <div class="space-y-3 pt-2">
         <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas de los Alumnos</h3>
         <div id="teacher-anonymous-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -258,7 +222,7 @@
       </div>
     </section>
 
-    <!-- PANTALLA 6: UNIRSE A CLASE CON CÓDIGO (ALUMNO) -->
+    <!-- PANTALLA 6: UNIRSE A CLASE CON CÓDIGO (ESTRICTO 4 DÍGITOS) -->
     <section id="screen-student-join" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto text-center space-y-6">
       <div class="flex justify-between items-center">
         <button type="button" onclick="showScreen('role-selector')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Cambiar rol</button>
@@ -267,17 +231,17 @@
 
       <div class="space-y-1">
         <h2 class="font-display font-bold text-xl text-slate-900">Ingresar a una Clase</h2>
-        <p class="text-xs text-slate-500">Ingresa el código corto proporcionado por el profesor.</p>
+        <p class="text-xs text-slate-500">Ingresa estrictamente el código de 4 dígitos proporcionado por el profesor.</p>
       </div>
 
-      <input type="text" id="student-class-code" maxLength="4" placeholder="CÓDIGO (Ej. A7B2)" class="w-full text-center text-3xl font-mono font-bold tracking-widest uppercase py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+      <input type="text" id="student-class-code" maxLength="4" placeholder="EJ. A7B2" class="w-full text-center text-3xl font-mono font-bold tracking-widest uppercase py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
 
       <button type="button" onclick="studentJoinLiveClass()" class="w-full bg-brand-green hover:bg-green-700 text-white font-bold py-3.5 rounded-full text-sm transition shadow-md">
         Entrar a la Clase
       </button>
     </section>
 
-    <!-- PANTALLA 7: INTERFAZ EN VIVO DEL ALUMNO (ANÓNIMA) -->
+    <!-- PANTALLA 7: INTERFAZ EN VIVO DEL ALUMNO -->
     <section id="screen-student-live-view" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-lg mx-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-4">
         <div>
@@ -287,7 +251,6 @@
         <button type="button" onclick="showScreen('student-join')" class="text-xs font-bold text-slate-400 hover:text-slate-600">Salir</button>
       </div>
 
-      <!-- SEÑAL DE COMPRENSIÓN -->
       <div class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">🧠 ¿Cómo vas con la explicación?</h4>
         <div class="grid grid-cols-3 gap-3">
@@ -297,7 +260,6 @@
         </div>
       </div>
 
-      <!-- SEÑAL DE RITMO -->
       <div class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">⚡ Ritmo de la clase</h4>
         <div class="grid grid-cols-3 gap-3">
@@ -307,7 +269,6 @@
         </div>
       </div>
 
-      <!-- ENVÍO DE DUDA ANÓNIMA -->
       <div class="space-y-2 pt-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Enviar Pregunta Anónima al Profesor</h4>
         <div class="flex gap-2">
@@ -320,7 +281,7 @@
   </main>
 
   <script>
-    // CREDENCIALES DE SUPABASE CORREGIDAS CON COMILLAS
+    // CREDENCIALES DE SUPABASE
     const SUPABASE_URL = 'https://fimesbygpbcizzgslhwq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG';
     
@@ -331,8 +292,6 @@
 
     let currentRole = null;
     let teacherProfile = null;
-    let teacherAuthMode = 'login';
-    let studentAuthMode = 'login';
     let liveChannel = null;
 
     let currentClass = {
@@ -354,7 +313,46 @@
       }
     };
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON CALLBACK DE SEGURIDAD
+    // LIMPIAR HASH DE SUPABASE Y VERIFICAR SESIÓN GOOGLE AL CARGAR
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (!supabaseClient) return;
+      
+      // Limpia el token de la URL para que no muestre la pantalla en blanco
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session && session.user) {
+        teacherProfile = {
+          name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
+          email: session.user.email
+        };
+        const welcomeElem = document.getElementById('teacher-welcome-name');
+        if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
+        showToast('Sesión de Google verificada con éxito');
+        showScreen('teacher-dashboard');
+      }
+    });
+
+    // INICIAR SESIÓN CON GOOGLE (Verificación real de cuenta en Google y Supabase)
+    async function handleGoogleLogin() {
+      if (!supabaseClient) {
+        showToast('Supabase no está configurado.');
+        return;
+      }
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + window.location.pathname
+        }
+      });
+      if (error) {
+        showToast('Error al iniciar sesión con Google: ' + error.message);
+      }
+    }
+
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO
     function connectToLiveRoom(roomCode, onSubscribedCallback) {
       if (!supabaseClient) {
         console.warn("Supabase client no configurado.");
@@ -458,12 +456,9 @@
     }
 
     function switchTeacherTab(mode) {
-      teacherAuthMode = mode;
       const btnLogin = document.getElementById('tab-teacher-login');
       const btnRegister = document.getElementById('tab-teacher-register');
       const title = document.getElementById('teacher-auth-title');
-      const btnAction = document.getElementById('teacher-submit-btn');
-      const nameCont = document.getElementById('teacher-name-container');
 
       const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
       const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
@@ -472,75 +467,16 @@
         if (btnLogin) btnLogin.className = activeClass;
         if (btnRegister) btnRegister.className = inactiveClass;
         if (title) title.innerText = 'Iniciar Sesión';
-        if (btnAction) btnAction.innerText = 'Iniciar Sesión';
-        if (nameCont) nameCont.classList.add('hidden');
       } else {
         if (btnRegister) btnRegister.className = activeClass;
         if (btnLogin) btnLogin.className = inactiveClass;
         if (title) title.innerText = 'Crear Cuenta de Docente';
-        if (btnAction) btnAction.innerText = 'Registrarse';
-        if (nameCont) nameCont.classList.remove('hidden');
       }
-    }
-
-    function switchStudentTab(mode) {
-      studentAuthMode = mode;
-      const btnLogin = document.getElementById('tab-student-login');
-      const btnRegister = document.getElementById('tab-student-register');
-      const btnCode = document.getElementById('tab-student-code');
-      const title = document.getElementById('student-auth-title');
-      const btnAction = document.getElementById('student-submit-btn');
-      const credsCont = document.getElementById('student-credentials-container');
-
-      const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
-      const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
-
-      if (btnLogin) btnLogin.className = mode === 'login' ? activeClass : inactiveClass;
-      if (btnRegister) btnRegister.className = mode === 'register' ? activeClass : inactiveClass;
-      if (btnCode) btnCode.className = mode === 'code' ? activeClass : inactiveClass;
-
-      if (mode === 'login' || mode === 'register') {
-        if (title) title.innerText = mode === 'login' ? 'Iniciar Sesión Alumno' : 'Crear Cuenta Anónima';
-        if (btnAction) btnAction.innerText = 'Continuar';
-        if (credsCont) credsCont.classList.remove('hidden');
-      } else {
-        if (title) title.innerText = 'Ingreso Directo por Código';
-        if (btnAction) btnAction.innerText = 'Ir a ingresar código';
-        if (credsCont) credsCont.classList.add('hidden');
-      }
-    }
-
-    function handleTeacherAuth(e) {
-      if (e) e.preventDefault();
-      const emailInput = document.getElementById('teacher-email');
-      const nameInput = document.getElementById('teacher-name');
-      const email = emailInput ? emailInput.value : '';
-      const nameVal = nameInput ? nameInput.value : '';
-
-      if (teacherAuthMode === 'register' && !nameVal.trim()) {
-        showToast('Por favor ingresa tu nombre completo.');
-        return;
-      }
-
-      teacherProfile = {
-        name: nameVal.trim() || (email ? email.split('@')[0] : 'Carlos Mendoza'),
-        email: email
-      };
-
-      const welcomeElem = document.getElementById('teacher-welcome-name');
-      if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
-      showToast('¡Sesión iniciada correctamente!');
-      showScreen('teacher-dashboard');
     }
 
     function handleStudentAuth(e) {
       if (e) e.preventDefault();
-      if (studentAuthMode === 'code') {
-        showScreen('student-join');
-      } else {
-        showToast('Acceso anónimo habilitado');
-        showScreen('student-join');
-      }
+      showScreen('student-join');
     }
 
     function createAndStartClass() {
@@ -621,12 +557,13 @@
       showScreen('teacher-dashboard');
     }
 
+    // VALIDACIÓN ESTRICTA DE 4 DÍGITOS PARA ALUMNOS
     function studentJoinLiveClass() {
       const codeInput = document.getElementById('student-class-code');
       const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
-      if (!code) {
-        showToast('Ingresa un código de clase válido.');
+      if (code.length !== 4) {
+        showToast('El código debe ser estrictamente de 4 dígitos.');
         return;
       }
 
@@ -644,7 +581,7 @@
 
       const liveTopicElem = document.getElementById('student-live-course-topic');
       if (liveTopicElem) liveTopicElem.innerText = `Clase en Vivo (${code})`;
-      showToast('Te has unido a la clase anónimamente desde tu dispositivo');
+      showToast('Te has unido a la clase anónimamente');
       showScreen('student-live-view');
     }
 
@@ -714,7 +651,10 @@
       }
     }
 
-    function logout() {
+    async function logout() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
       teacherProfile = null;
       if (liveChannel && supabaseClient) {
         supabaseClient.removeChannel(liveChannel);
@@ -722,6 +662,19 @@
       showToast('Sesión cerrada');
       showScreen('role-selector');
     }
+
+    window.selectRole = selectRole;
+    window.showScreen = showScreen;
+    window.switchTeacherTab = switchTeacherTab;
+    window.handleGoogleLogin = handleGoogleLogin;
+    window.handleStudentAuth = handleStudentAuth;
+    window.createAndStartClass = createAndStartClass;
+    window.toggleStartClass = toggleStartClass;
+    window.finishClass = finishClass;
+    window.studentJoinLiveClass = studentJoinLiveClass;
+    window.studentSendSignal = studentSendSignal;
+    window.studentSendAnonymousQuestion = studentSendAnonymousQuestion;
+    window.logout = logout;
   </script>
 </body>
 </html>
