@@ -317,9 +317,9 @@
   </main>
 
 <script>
-    // CREDENCIALES DE SUPABASE (Reemplaza con las reales de tu proyecto)
-    const SUPABASE_URL = https://fimesbygpbcizzgslhwq.supabase.co ;
-    const SUPABASE_KEY = sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG ;
+    // CREDENCIALES DE SUPABASE CORREGIDAS CON COMILLAS
+    const SUPABASE_URL = 'https://fimesbygpbcizzgslhwq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG';
     
     let supabaseClient = null;
     if (window.supabase) {
@@ -351,7 +351,7 @@
       }
     };
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON CALLBACK DE SEGURIDAD
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON COMILLAS INVERTIDAS CORRECTAS
     function connectToLiveRoom(roomCode, onSubscribedCallback) {
       if (!supabaseClient) {
         console.warn("Supabase client no configurado.");
@@ -392,7 +392,7 @@
         })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log(`Conectado al canal en vivo: room_${roomCode}`);
+            console.log(`Conectado al canal en vivo multi-dispositivo: room_${roomCode}`);
             if (typeof onSubscribedCallback === 'function') {
               onSubscribedCallback();
             }
@@ -629,7 +629,6 @@
 
       currentClass.code = code;
 
-      // Se conecta y envía el evento de unión asegurando que el canal ya está listo
       connectToLiveRoom(code, () => {
         if (liveChannel) {
           liveChannel.send({
