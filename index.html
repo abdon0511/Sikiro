@@ -316,11 +316,10 @@
 
   </main>
 
-  <!-- LÓGICA DE INTERACCIÓN Y SINCRONIZACIÓN EN TIEMPO REAL EN VIVO -->
-  <script>
-    // CREDENCIALES DE SUPABASE (Configuradas con tu proyecto)
-    const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-    const SUPABASE_KEY = 'tu-anon-key-de-supabase';
+<script>
+    // CREDENCIALES DE SUPABASE (Reemplaza con las reales de tu proyecto)
+    const SUPABASE_URL = https://fimesbygpbcizzgslhwq.supabase.co ;
+    const SUPABASE_KEY = sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG ;
     
     let supabaseClient = null;
     if (window.supabase) {
@@ -352,10 +351,10 @@
       }
     };
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO (SUPABASE REALTIME) con callback de seguridad
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON CALLBACK DE SEGURIDAD
     function connectToLiveRoom(roomCode, onSubscribedCallback) {
       if (!supabaseClient) {
-        console.warn("Supabase client no configurado. Asegúrate de poner tus URL y Key.");
+        console.warn("Supabase client no configurado.");
         return;
       }
 
@@ -363,7 +362,6 @@
         supabaseClient.removeChannel(liveChannel);
       }
 
-      // Suscribirse al canal en tiempo real para este código de clase
       liveChannel = supabaseClient.channel(`room_${roomCode}`, {
         config: { broadcast: { self: false } }
       });
@@ -394,7 +392,7 @@
         })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log(`Conectado al canal en vivo multi-dispositivo: room_${roomCode}`);
+            console.log(`Conectado al canal en vivo: room_${roomCode}`);
             if (typeof onSubscribedCallback === 'function') {
               onSubscribedCallback();
             }
@@ -509,7 +507,7 @@
       }
     }
 
-    async function handleTeacherAuth(e) {
+    function handleTeacherAuth(e) {
       if (e) e.preventDefault();
       const emailInput = document.getElementById('teacher-email');
       const nameInput = document.getElementById('teacher-name');
@@ -528,7 +526,6 @@
 
       const welcomeElem = document.getElementById('teacher-welcome-name');
       if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
-      
       showToast('¡Sesión iniciada correctamente!');
       showScreen('teacher-dashboard');
     }
@@ -568,7 +565,6 @@
       if (topicElem) topicElem.innerText = `${course} - ${topic}`;
       if (codeElem) codeElem.innerText = `CÓDIGO: ${currentClass.code}`;
       
-      // Conectar sala multi-dispositivo para el docente
       connectToLiveRoom(currentClass.code);
 
       updateTeacherLiveStats();
@@ -633,7 +629,7 @@
 
       currentClass.code = code;
 
-      // Conectar sala y garantizar el envío del evento STUDENT_JOIN tras la suscripción exitosa
+      // Se conecta y envía el evento de unión asegurando que el canal ya está listo
       connectToLiveRoom(code, () => {
         if (liveChannel) {
           liveChannel.send({
