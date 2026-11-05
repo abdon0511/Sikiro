@@ -3,751 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sikiro · Retroalimentación académica en tiempo real</title>
-  
-  <!-- Tipografías: Sora (Display) e Inter (Cuerpo) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS v4 CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Sora', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              blue: '#2563eb',
-              blueHover: '#1d4ed8',
-              green: '#16a34a',
-              orange: '#ea580c',
-              dark: '#0f172a',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- React 19 & Babel CDN -->
-  <script src="https://unpkg.com/react@19/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@19/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <style>
-    /* Textura de grano sutil para fondo */
-    .bg-grain {
-      background-color: #f8fafc;
-      background-image: radial-gradient(#cbd5e1 0.75px, transparent 0.75px);
-      background-size: 16px 16px;
-    }
-  </style>
-</head>
-<body class="bg-grain min-h-screen text-slate-800 antialiased font-sans">
-  <div id="root"></div>
-
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
-
-    // --- BASE DE DATOS LOCAL / ESTADO SIMULADO ---
-    const INITIAL_STATE = {
-      user: null, // { role: 'teacher' | 'student', name: '...' }
-      classes: [
-        { id: 'c1', name: 'Matemáticas', subject: 'Álgebra', grade: '3er Sec', section: 'A', teacherId: 't1' }
-      ],
-      activeSession: {
-        id: 's1',
-        classId: 'c1',
-        code: 'A7B2',
-        topic: 'Ecuaciones Cuadráticas y Factorización',
-        state: 'live', // 'waiting' | 'live' | 'paused' | 'finished'
-        students: [
-          { id: 'st1', name: 'Ana García', lastSeen: 'Ahora' },
-          { id: 'st2', name: 'Carlos López', lastSeen: 'Ahora' },
-          { id: 'st3', name: 'Sofía Martínez', lastSeen: 'Hace 1m' },
-          { id: 'st4', name: 'Mateo Rodríguez', lastSeen: 'Ahora' }
-        ],
-        feedbackRequests: { active: true, startTime: '10:15 AM' },
-        pulses: {
-          comprension: { seguro: 2, parcial: 1, perdido: 0, noRespondieron: 1 },
-          ritmo: { lento: 0, adecuado: 2, rapido: 1, noRespondieron: 1 },
-          emocional: { bien: 2, neutral: 1, frustrado: 0, cansado: 0, motivado: 0 }
-        },
-        doubts: [
-          { id: 'd1', text: '¿Se puede usar la fórmula general si el discriminante es negativo?', studentName: 'Carlos López', shared: false }
-        ],
-        checkpoints: [
-          { id: 'chk1', question: '¿Cuál es el valor de x en x² - 9 = 0?', active: false, results: { a: 1, b: 3, c: 0 }, correct: 'b' }
-        ]
-      }
-    };
-
-    // --- MOTOR PEDAGÓGICO (Reglas concretas) ---
-    function calcularMotorPedagogico(session) {
-      const { comprension, ritmo, emocional } = session.pulses;
-      const totalRespondieronComp = comprension.seguro + comprension.parcial + comprension.perdido;
-      
-      // Comprensión (0-100)
-      let compScore = 100;
-      if (totalRespondieronComp > 0) {
-        const puntos = (comprension.seguro * 1.0) + (comprension.parcial * 0.5) + (comprension.perdido * 0);
-        compScore = Math.round((puntos / totalRespondieronComp) * 100);
-      }
-
-      // Falsa comprensión (ficticia para demostración)
-      const falsaComp = 10;
-
-      // Ritmo adecuado %
-      const totalRitmo = ritmo.lento + ritmo.adecuado + ritmo.rapido;
-      const ritmoAdecuadoPct = totalRitmo > 0 ? Math.round((ritmo.adecuado / totalRitmo) * 100) : 100;
-
-      // Ánimo negativo %
-      const totalEmo = emocional.bien + emocional.neutral + emocional.frustrado + emocional.cansado + emocional.motivado;
-      const animoNegativoPct = totalEmo > 0 ? Math.round(((emocional.frustrado + emocional.cansado) / totalEmo) * 100) : 0;
-
-      // Índice de salud (0–100)
-      const salud = Math.min(100, Math.max(0, Math.round(
-        (0.5 * compScore) + 
-        (0.2 * (100 - falsaComp)) + 
-        (0.15 * ritmoAdecuadoPct) + 
-        (0.15 * (100 - animoNegativoPct))
-      )));
-
-      // Recomendación automática
-      let recomendacion = { titulo: "Todo va bien", desc: "Sigue con el plan de clase.", tipo: "success" };
-      if (totalRespondieronComp === 0) {
-        recomendacion = { titulo: "Sin datos aún", desc: "Lanza un checkpoint o solicita feedback.", tipo: "info" };
-      } else if (compScore < 60) {
-        recomendacion = { titulo: "Comprensión baja", desc: "Abre un checkpoint de 3 min y repasa el concepto central.", tipo: "danger" };
-      } else if (ritmo.rapido > ritmo.adecuado) {
-        recomendacion = { titulo: "Ritmo percibido acelerado", desc: "Baja la velocidad y abre 2 min para preguntas.", tipo: "warning" };
-      } else if (animoNegativoPct > 30) {
-        recomendacion = { titulo: "Estado del aula bajo", desc: "Haz una pausa breve o cambia de dinámica.", tipo: "warning" };
-      }
-
-      return { compScore, salud, recomendacion, representatividad: totalRespondieronComp > 0 ? Math.round((totalRespondieronComp / session.students.length) * 100) : 0 };
-    }
-
-    // --- COMPONENTES UI REUTILIZABLES ---
-    const Navbar = ({ user, onNavigate, onLogout }) => (
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate('landing')}>
-            <span className="font-display font-extrabold text-2xl tracking-tight text-brand-blue">Sikiro</span>
-            <span className="bg-blue-50 text-brand-blue text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200">Beta</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-600 hidden sm:inline">{user.name} ({user.role === 'teacher' ? 'Docente' : 'Estudiante'})</span>
-                <button onClick={onLogout} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-full transition">
-                  Cerrar sesión
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button onClick={() => onNavigate('auth', { mode: 'login' })} className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2">
-                  Entrar
-                </button>
-                <button onClick={() => onNavigate('auth', { mode: 'register' })} className="text-sm font-semibold bg-brand-blue hover:bg-brand-blueHover text-white px-4 py-2 rounded-full transition shadow-sm">
-                  Crear cuenta
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-    );
-
-    // --- PANTALLA 1: LANDING PAGE ---
-    const LandingPage = ({ onNavigate }) => (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <span className="bg-blue-100 text-brand-blue font-semibold text-xs px-3 py-1.5 rounded-full uppercase tracking-wider">
-          Retroalimentación académica en tiempo real
-        </span>
-        <h1 className="font-display font-extrabold text-4xl sm:text-6xl text-slate-900 mt-6 leading-tight">
-          Siente el pulso de tu aula en vivo
-        </h1>
-        <p className="text-lg sm:text-xl text-slate-600 mt-4 max-w-2xl mx-auto">
-          Inicia tu clase, comparte un código corto y comprende exactamente el ritmo, dudas y nivel de comprensión de tus estudiantes sin exponer a nadie.
-        </p>
-        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <button onClick={() => onNavigate('auth', { role: 'teacher' })} className="bg-brand-blue hover:bg-brand-blueHover text-white font-bold text-lg px-8 py-4 rounded-full shadow-lg transition transform hover:-translate-y-0.5">
-            Soy Docente — Iniciar
-          </button>
-          <button onClick={() => onNavigate('join')} className="bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold text-lg px-8 py-4 rounded-full transition">
-            Unirse como Estudiante
-          </button>
-        </div>
-
-        {/* 3 Pasos */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20 text-left">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 bg-blue-100 text-brand-blue rounded-2xl flex items-center justify-center font-bold font-display text-xl mb-4">1</div>
-            <h3 className="font-display font-bold text-lg text-slate-900">Inicia tu clase</h3>
-            <p className="text-slate-600 text-sm mt-2">Crea una sesión e ingresa el tema. Obtendrás un código corto de 4 letras para proyectar.</p>
-          </div>
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 bg-green-100 text-brand-green rounded-2xl flex items-center justify-center font-bold font-display text-xl mb-4">2</div>
-            <h3 className="font-display font-bold text-lg text-slate-900">Recibe señales en vivo</h3>
-            <p className="text-slate-600 text-sm mt-2">Los estudiantes envían comprensión, velocidad y dudas desde su teléfono de forma confidencial.</p>
-          </div>
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 bg-orange-100 text-brand-orange rounded-2xl flex items-center justify-center font-bold font-display text-xl mb-4">3</div>
-            <h3 className="font-display font-bold text-lg text-slate-900">Genera evidencia PDF</h3>
-            <p className="text-slate-600 text-sm mt-2">Al terminar, obtén un informe pedagógico con el índice de salud del aula para tu portafolio.</p>
-          </div>
-        </div>
-      </div>
-    );
-
-    // --- PANTALLA 2: AUTHENTICATION ---
-    const AuthPage = ({ initialMode = 'login', initialRole = 'teacher', onLogin }) => {
-      const [isLogin, setIsLogin] = useState(initialMode === 'login');
-      const [role, setRole] = useState(initialRole);
-      const [email, setEmail] = useState('');
-      const [name, setName] = useState('');
-
-      const handleSubmit = (e) => {
-        e.preventDefault();
-        onLogin({ name: name || (email ? email.split('@')[0] : 'Usuario'), role });
-      };
-
-      return (
-        <div className="max-w-md mx-auto px-4 py-12">
-          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md">
-            <div className="flex bg-slate-100 p-1 rounded-full mb-6">
-              <button onClick={() => setRole('teacher')} className={`flex-1 py-2 text-xs font-bold rounded-full transition ${role === 'teacher' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Docente</button>
-              <button onClick={() => setRole('student')} className={`flex-1 py-2 text-xs font-bold rounded-full transition ${role === 'student' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Estudiante</button>
-            </div>
-
-            <h2 className="font-display font-bold text-2xl text-slate-900 mb-2">
-              {role === 'teacher' ? (isLogin ? 'Entrar como Docente' : 'Crear cuenta de Docente') : 'Ingreso de Estudiante'}
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">
-              {role === 'teacher' ? 'Gestiona tus clases y genera evidencia pedagógica.' : 'Solo necesitas ingresar tu nombre para unirte a una clase.'}
-            </p>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {role === 'student' ? (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tu Nombre Completo</label>
-                  <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Ana García" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                </div>
-              ) : (
-                <>
-                  {!isLogin && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nombre</label>
-                      <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Prof. Juan Pérez" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Electrónico</label>
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="docente@colegio.edu" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
-                    <input type="password" required placeholder="••••••••" className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                  </div>
-                </>
-              )}
-
-              <button type="submit" className="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3.5 rounded-full transition mt-2 shadow-sm">
-                {role === 'student' ? 'Continuar' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
-              </button>
-            </form>
-
-            {role === 'teacher' && (
-              <p className="text-center text-xs text-slate-500 mt-6">
-                {isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
-                <button onClick={() => setIsLogin(!isLogin)} className="text-brand-blue font-bold hover:underline">
-                  {isLogin ? 'Regístrate aquí' : 'Ingresa aquí'}
-                </button>
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    };
-
-    // --- PANTALLA 3: DOCENTE - PANEL DE CLASES Y DETALLE ---
-    const TeacherDashboard = ({ state, setState, onNavigate }) => {
-      const [showModal, setShowModal] = useState(false);
-      const [className, setClassName] = useState('');
-      const [subject, setSubject] = useState('');
-      const [topic, setTopic] = useState('');
-
-      const handleStartClass = (cId) => {
-        if (!topic) return alert("Escribe el tema de la clase");
-        setState(prev => ({
-          ...prev,
-          activeSession: {
-            ...prev.activeSession,
-            classId: cId,
-            topic: topic,
-            state: 'live'
-          }
-        }));
-        onNavigate('teacher-session');
-      };
-
-      return (
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="font-display font-extrabold text-3xl text-slate-900">Mis Clases</h1>
-              <p className="text-sm text-slate-500">Panel de control de sesiones activas e historial</p>
-            </div>
-            <button onClick={() => setShowModal(true)} className="bg-brand-blue hover:bg-brand-blueHover text-white font-bold text-sm px-5 py-3 rounded-full transition shadow-sm">
-              + Crear clase
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {state.classes.map(c => (
-              <div key={c.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-bold text-brand-blue bg-blue-50 px-3 py-1 rounded-full">{c.subject} · {c.grade} "{c.section}"</span>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-brand-green flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> En Vivo
-                    </span>
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-slate-900">{c.name}</h3>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100 space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">Tema para la sesión de hoy</label>
-                    <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="Ej. Factorización de trinomios" className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleStartClass(c.id)} className="flex-1 bg-brand-green hover:bg-green-700 text-white font-bold text-xs py-3 rounded-full transition text-center">
-                      Iniciar Sesión En Vivo
-                    </button>
-                    <button onClick={() => onNavigate('teacher-session')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-full transition">
-                      Abrir
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {showModal && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
-                <h3 className="font-display font-bold text-xl text-slate-900 mb-4">Nueva Clase</h3>
-                <div className="space-y-4">
-                  <input type="text" placeholder="Nombre de la clase (Ej. Matemáticas III)" value={className} onChange={e => setClassName(e.target.value)} className="w-full px-4 py-3 rounded-2xl border border-slate-200" />
-                  <input type="text" placeholder="Materia (Ej. Álgebra)" value={subject} onChange={e => setSubject(e.target.value)} className="w-full px-4 py-3 rounded-2xl border border-slate-200" />
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowModal(false)} className="flex-1 py-3 text-xs font-bold text-slate-500">Cancelar</button>
-                    <button onClick={() => {
-                      if (className) {
-                        setState(p => ({ ...p, classes: [...p.classes, { id: 'c' + (p.classes.length + 1), name: className, subject: subject || 'General', grade: '1er Sec', section: 'A' }] }));
-                        setShowModal(false);
-                      }
-                    }} className="flex-1 bg-brand-blue text-white py-3 rounded-full font-bold text-xs">Guardar</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // --- PANTALLA 4: DOCENTE - COMMAND CENTER EN VIVO ---
-    const TeacherSession = ({ state, setState, onNavigate }) => {
-      const { activeSession } = state;
-      const [showRoster, setShowRoster] = useState(false);
-      const metrics = useMemo(() => calcularMotorPedagogico(activeSession), [activeSession]);
-
-      const handleStateChange = (newState) => {
-        if (newState === 'finished') {
-          onNavigate('teacher-summary');
-        } else {
-          setState(p => ({ ...p, activeSession: { ...p.activeSession, state: newState } }));
-        }
-      };
-
-      const handleShareDoubt = (id) => {
-        setState(p => ({
-          ...p,
-          activeSession: {
-            ...p.activeSession,
-            doubts: p.activeSession.doubts.map(d => d.id === id ? { ...d, shared: true } : d)
-          }
-        }));
-      };
-
-      return (
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-          {/* Encabezado y controles de sesión */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`w-2.5 h-2.5 rounded-full ${activeSession.state === 'live' ? 'bg-brand-green animate-pulse' : 'bg-orange-400'}`}></span>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  {activeSession.state === 'live' ? 'Clase en vivo' : 'Clase en pausa'}
-                </span>
-                <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200">
-                  Código: {activeSession.code}
-                </span>
-              </div>
-              <h1 className="font-display font-extrabold text-2xl text-slate-900">{activeSession.topic}</h1>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {activeSession.state === 'live' ? (
-                <button onClick={() => handleStateChange('paused')} className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold px-4 py-2.5 rounded-full transition">Pausar</button>
-              ) : (
-                <button onClick={() => handleStateChange('live')} className="bg-brand-green text-white text-xs font-bold px-4 py-2.5 rounded-full transition">Reanudar</button>
-              )}
-              <button onClick={() => handleStateChange('finished')} className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold px-4 py-2.5 rounded-full transition">Finalizar Clase</button>
-            </div>
-          </div>
-
-          {/* Banner de Recomendación Pedagógica */}
-          <div className={`p-5 rounded-3xl border flex items-start gap-4 ${
-            metrics.recomendacion.tipo === 'danger' ? 'bg-rose-50 border-rose-200 text-rose-900' :
-            metrics.recomendacion.tipo === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' :
-            'bg-blue-50 border-blue-200 text-blue-900'
-          }`}>
-            <div className="p-2 rounded-2xl bg-white shadow-sm font-bold text-xs uppercase">Sikiro Bot</div>
-            <div>
-              <h4 className="font-display font-bold text-sm">{metrics.recomendacion.titulo}</h4>
-              <p className="text-xs mt-0.5 opacity-90">{metrics.recomendacion.desc}</p>
-            </div>
-          </div>
-
-          {/* Panel Principal: Cómo responde la clase */}
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div>
-                  <h2 className="font-display font-bold text-xl text-slate-900">Cómo responde la clase</h2>
-                  <p className="text-xs text-slate-500">Comprensión · Ritmo · Estado</p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowRoster(true)} className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-full">Ver estudiantes ({activeSession.students.length})</button>
-                </div>
-              </div>
-
-              {/* Métrica 1: Comprensión */}
-              <div>
-                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                  <span>Nivel de Comprensión</span>
-                  <span className="text-brand-blue">{metrics.compScore}% Promedio</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-green-50 p-3 rounded-2xl border border-green-100">
-                    <span className="block text-2xl font-bold text-brand-green">{activeSession.pulses.comprension.seguro}</span>
-                    <span className="text-[10px] font-bold text-green-700 uppercase">🟢 Seguro</span>
-                  </div>
-                  <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100">
-                    <span className="block text-2xl font-bold text-amber-600">{activeSession.pulses.comprension.parcial}</span>
-                    <span className="text-[10px] font-bold text-amber-700 uppercase">🟡 Parcial</span>
-                  </div>
-                  <div className="bg-rose-50 p-3 rounded-2xl border border-rose-100">
-                    <span className="block text-2xl font-bold text-rose-600">{activeSession.pulses.comprension.perdido}</span>
-                    <span className="text-[10px] font-bold text-rose-700 uppercase">🔴 Perdido</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Métrica 2: Ritmo */}
-              <div>
-                <span className="block text-xs font-bold text-slate-700 mb-2">Ritmo del Aula</span>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <span className="block font-bold text-slate-800">{activeSession.pulses.ritmo.lento}</span>
-                    <span className="text-[10px] text-slate-500 uppercase">🐢 Lento</span>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <span className="block font-bold text-slate-800">{activeSession.pulses.ritmo.adecuado}</span>
-                    <span className="text-[10px] text-slate-500 uppercase">🙂 Adecuado</span>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <span className="block font-bold text-slate-800">{activeSession.pulses.ritmo.rapido}</span>
-                    <span className="text-[10px] text-slate-500 uppercase">⚡ Rápido</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl text-xs text-slate-500">
-                <span>Respondieron {activeSession.pulses.comprension.seguro + activeSession.pulses.comprension.parcial + activeSession.pulses.comprension.perdido} de {activeSession.students.length} estudiantes</span>
-                <span className="font-bold">Sin responder: {activeSession.pulses.comprension.noRespondieron}</span>
-              </div>
-            </div>
-
-            {/* Panel Lateral: Dudas recibidas */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="font-display font-bold text-lg text-slate-900">Dudas del Aula</h3>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {activeSession.doubts.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-8 text-center">No hay dudas por el momento.</p>
-                ) : (
-                  activeSession.doubts.map(d => (
-                    <div key={d.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                      <p className="text-xs text-slate-800 font-medium">"{d.text}"</p>
-                      <div className="flex justify-between items-center text-[10px] text-slate-400">
-                        <span>Enviado por {d.studentName} (Privado)</span>
-                        {d.shared ? (
-                          <span className="text-brand-green font-bold">Compartida</span>
-                        ) : (
-                          <button onClick={() => handleShareDoubt(d.id)} className="text-brand-blue font-bold hover:underline">Compartir anónimo</button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Diálogo Roster Privado */}
-          {showRoster && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-display font-bold text-xl text-slate-900">Estado Individual del Aula</h3>
-                  <button onClick={() => setShowRoster(false)} className="text-slate-400 font-bold">✕</button>
-                </div>
-                <p className="text-xs text-slate-500 mb-4">Visible solo para ti. Tus estudiantes no ven esta información.</p>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {activeSession.students.map(s => (
-                    <div key={s.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl text-xs">
-                      <span className="font-bold text-slate-800">{s.name}</span>
-                      <span className="bg-green-100 text-brand-green font-bold px-2 py-1 rounded-full text-[10px]">Respondió</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // --- PANTALLA 5: DOCENTE - EVIDENCIA PDF Y RESUMEN ---
-    const TeacherSummary = ({ state, onNavigate }) => {
-      const { activeSession } = state;
-      const metrics = useMemo(() => calcularMotorPedagogico(activeSession), [activeSession]);
-
-      return (
-        <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-6">
-            <div className="flex justify-between items-start border-b border-slate-100 pb-6">
-              <div>
-                <span className="text-xs font-bold text-brand-blue bg-blue-50 px-3 py-1 rounded-full">Resumen Post-Clase</span>
-                <h1 className="font-display font-extrabold text-3xl text-slate-900 mt-2">{activeSession.topic}</h1>
-                <p className="text-xs text-slate-500 mt-1">Fecha: {new Date().toLocaleDateString()} · Sikiro Evidencia A4</p>
-              </div>
-              <div className="text-right">
-                <span className="block font-display font-extrabold text-4xl text-brand-green">{metrics.salud}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Índice Salud</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <span className="block font-bold text-xl text-slate-800">{metrics.compScore}%</span>
-                <span className="text-[10px] text-slate-500 uppercase">Comprensión</span>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <span className="block font-bold text-xl text-slate-800">{metrics.representatividad}%</span>
-                <span className="text-[10px] text-slate-500 uppercase">Participación</span>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <span className="block font-bold text-xl text-slate-800">{activeSession.students.length}</span>
-                <span className="text-[10px] text-slate-500 uppercase">Estudiantes</span>
-              </div>
-            </div>
-
-            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-              <h4 className="font-display font-bold text-sm text-brand-blue">Recomendación Final</h4>
-              <p className="text-xs text-blue-900 mt-1">{metrics.recomendacion.desc}</p>
-            </div>
-
-            <div className="pt-4 flex gap-4">
-              <button onClick={() => alert("Generando documento PDF A4...")} className="flex-1 bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3.5 rounded-full text-xs shadow-sm transition">
-                Descargar Evidencia en PDF
-              </button>
-              <button onClick={() => onNavigate('teacher')} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-6 py-3.5 rounded-full text-xs transition">
-                Volver
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // --- PANTALLA 6: ESTUDIANTE - UNIRSE Y EXPERIENCIA EN VIVO ---
-    const StudentExperience = ({ state, setState, onNavigate }) => {
-      const { activeSession, user } = state;
-      const [code, setCode] = useState('');
-      const [joined, setJoined] = useState(false);
-      const [doubt, setDoubt] = useState('');
-      const [toast, setToast] = useState('');
-
-      const showToastMsg = (msg) => {
-        setToast(msg);
-        setTimeout(() => setToast(''), 3000);
-      };
-
-      const handleSendSignal = (kind, val) => {
-        setState(p => {
-          const newPulses = { ...p.activeSession.pulses };
-          if (kind === 'comprension') newPulses.comprension[val] += 1;
-          if (kind === 'ritmo') newPulses.ritmo[val] += 1;
-          if (kind === 'emocional') newPulses.emocional[val] += 1;
-          return { ...p, activeSession: { ...p.activeSession, pulses: newPulses } };
-        });
-        showToastMsg('✓ Respuesta registrada.');
-      };
-
-      const handleSendDoubt = (e) => {
-        e.preventDefault();
-        if (!doubt) return;
-        setState(p => ({
-          ...p,
-          activeSession: {
-            ...p.activeSession,
-            doubts: [...p.activeSession.doubts, { id: 'd' + Date.now(), text: doubt, studentName: user?.name || 'Estudiante', shared: false }]
-          }
-        }));
-        setDoubt('');
-        showToastMsg('Duda enviada a tu docente.');
-      };
-
-      if (!joined) {
-        return (
-          <div className="max-w-md mx-auto px-4 py-16">
-            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md text-center">
-              <h2 className="font-display font-extrabold text-2xl text-slate-900 mb-2">Ingresar a una clase</h2>
-              <p className="text-xs text-slate-500 mb-6">Ingresa el código corto proporcionado por tu docente.</p>
-              <input type="text" maxLength={4} value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="A7B2" className="w-full text-center text-3xl font-mono tracking-widest uppercase font-bold py-3 rounded-2xl border border-slate-200 mb-4 focus:ring-2 focus:ring-brand-blue" />
-              <button onClick={() => {
-                if (code === activeSession.code) setJoined(true);
-                else alert("No encontramos una sesión activa con ese código.");
-              }} className="w-full bg-brand-green hover:bg-green-700 text-white font-bold py-3.5 rounded-full text-sm transition">
-                Unirme a la clase
-              </button>
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="max-w-md mx-auto px-4 py-6 space-y-4">
-          {toast && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg z-50 animate-bounce">
-              {toast}
-            </div>
-          )}
-
-          {/* Tarjeta de estado de clase */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-brand-green bg-green-50 px-2.5 py-1 rounded-full uppercase">Clase en vivo</span>
-              <h2 className="font-display font-bold text-lg text-slate-900 mt-1">{activeSession.topic}</h2>
-            </div>
-          </div>
-
-          {/* Botones permanentes de señales */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-            <h3 className="font-display font-bold text-sm text-slate-900">🧠 ¿Cómo vas con el tema?</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => handleSendSignal('comprension', 'seguro')} className="p-3 rounded-2xl bg-green-50 border border-green-200 hover:bg-green-100 font-bold text-xs text-brand-green">🟢 Seguro</button>
-              <button onClick={() => handleSendSignal('comprension', 'parcial')} className="p-3 rounded-2xl bg-amber-50 border border-amber-200 hover:bg-amber-100 font-bold text-xs text-amber-700">🟡 Parcial</button>
-              <button onClick={() => handleSendSignal('comprension', 'perdido')} className="p-3 rounded-2xl bg-rose-50 border border-rose-200 hover:bg-rose-100 font-bold text-xs text-rose-700">🔴 Perdido</button>
-            </div>
-
-            <h3 className="font-display font-bold text-sm text-slate-900 pt-2">⚡ Ritmo de la clase</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => handleSendSignal('ritmo', 'lento')} className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-xs font-semibold">🐢 Lento</button>
-              <button onClick={() => handleSendSignal('ritmo', 'adecuado')} className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-xs font-semibold">🙂 Adecuado</button>
-              <button onClick={() => handleSendSignal('ritmo', 'rapido')} className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-xs font-semibold">⚡ Rápido</button>
-            </div>
-          </div>
-
-          {/* Enviar duda */}
-          <form onSubmit={handleSendDoubt} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-            <h3 className="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Tengo una duda</h3>
-            <input type="text" value={doubt} onChange={e => setDoubt(e.target.value)} placeholder="Escribe tu duda al docente..." className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-xs focus:ring-2 focus:ring-brand-blue" />
-            <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-full text-xs transition">
-              Enviar duda
-            </button>
-          </form>
-
-          {/* Dudas compartidas */}
-          {activeSession.doubts.some(d => d.shared) && (
-            <div className="bg-blue-50 p-5 rounded-3xl border border-blue-100 space-y-2">
-              <h4 className="font-display font-bold text-xs text-brand-blue uppercase">Dudas compartidas con la clase</h4>
-              {activeSession.doubts.filter(d => d.shared).map(d => (
-                <p key={d.id} className="text-xs text-blue-950 bg-white p-3 rounded-2xl border border-blue-100">
-                  "Un estudiante pregunta: {d.text}"
-                </p>
-              ))}
-            </div>
-          )}
-
-          <p className="text-[10px] text-center text-slate-400 py-2">
-            Tus respuestas son visibles únicamente para tu docente.
-          </p>
-        </div>
-      );
-    };
-
-    // --- COMPONENTE PRINCIPAL ---
-    const App = () => {
-      const [state, setState] = useState(INITIAL_STATE);
-      const [currentRoute, setCurrentRoute] = useState('landing');
-
-      const navigate = (route, params = {}) => {
-        if (params.role || params.mode) {
-          setState(p => ({ ...p, user: { role: params.role || 'teacher', name: 'Docente Demo' } }));
-        }
-        setCurrentRoute(route);
-      };
-
-      const logout = () => {
-        setState(p => ({ ...p, user: null }));
-        setCurrentRoute('landing');
-      };
-
-      return (
-        <div className="min-h-screen flex flex-col">
-          <Navbar user={state.user} onNavigate={navigate} onLogout={logout} />
-          <main className="flex-1">
-            {currentRoute === 'landing' && <LandingPage onNavigate={navigate} />}
-            {currentRoute === 'auth' && <AuthPage onLogin={(u) => { setState(p => ({ ...p, user: u })); navigate(u.role === 'teacher' ? 'teacher' : 'student'); }} />}
-            {currentRoute === 'teacher' && <TeacherDashboard state={state} setState={setState} onNavigate={navigate} />}
-            {currentRoute === 'teacher-session' && <TeacherSession state={state} setState={setState} onNavigate={navigate} />}
-            {currentRoute === 'teacher-summary' && <TeacherSummary state={state} onNavigate={navigate} />}
-            {(currentRoute === 'student' || currentRoute === 'join') && <StudentExperience state={state} setState={setState} onNavigate={navigate} />}
-          </main>
-        </div>
-      );
-    };
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sikiro · Retroalimentación Académica en Tiempo Real</title>
 
   <!-- Tailwind CSS CDN -->
@@ -1063,6 +318,15 @@
 
   <!-- LÓGICA DE INTERACCIÓN Y SINCRONIZACIÓN EN TIEMPO REAL EN VIVO -->
   <script>
+    // CREDENCIALES DE SUPABASE (Reemplaza con las de tu proyecto en Supabase Dashboard)
+    const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+    const SUPABASE_KEY = 'tu-anon-key-de-supabase';
+    
+    let supabaseClient = null;
+    if (window.supabase) {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
     let currentRole = null;
     let teacherProfile = null;
     let teacherAuthMode = 'login';
@@ -1088,65 +352,51 @@
       }
     };
 
-    // Inicializar canal de comunicación entre pestañas para tiempo real en vivo
-    try {
-      liveChannel = new BroadcastChannel('sikiro_live_room');
-      liveChannel.onmessage = (event) => {
-        handleLiveMessage(event.data);
-      };
-    } catch (err) {
-      console.warn("BroadcastChannel no soportado en este entorno", err);
-    }
-
-    function handleLiveMessage(msg) {
-      if (!msg || !msg.type) return;
-
-      // Un alumno solicita unirse con un código
-      if (msg.type === 'STUDENT_JOIN' && msg.code === currentClass.code) {
-        if (currentRole === 'teacher') {
-          currentClass.studentsCount++;
-          updateTeacherLiveStats();
-          showToast('🎓 Un alumno se ha conectado a la clase.');
-          // Confirmar unión al alumno
-          if (liveChannel) {
-            liveChannel.postMessage({
-              type: 'JOIN_ACCEPTED',
-              code: currentClass.code,
-              course: currentClass.course,
-              topic: currentClass.topic
-            });
-          }
-        }
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO (SUPABASE REALTIME)
+    function connectToLiveRoom(roomCode) {
+      if (!supabaseClient) {
+        console.warn("Supabase client no configurado. Asegúrate de poner tus URL y Key.");
+        return;
       }
 
-      // Respuesta de confirmación para el alumno
-      if (msg.type === 'JOIN_ACCEPTED' && currentRole === 'student') {
-        const studentCodeInput = document.getElementById('student-class-code');
-        if (studentCodeInput && studentCodeInput.value.toUpperCase() === msg.code) {
-          document.getElementById('student-live-course-topic').innerText = `${msg.course} - ${msg.topic}`;
-          showToast('✓ Conectado exitosamente a la clase');
-          showScreen('student-live-view');
-        }
+      if (liveChannel) {
+        supabaseClient.removeChannel(liveChannel);
       }
 
-      // Recepción de señal de estudiante (comprensión o ritmo)
-      if (msg.type === 'STUDENT_SIGNAL' && msg.code === currentClass.code) {
-        if (currentRole === 'teacher') {
-          if (msg.kind && currentClass.signals[msg.val] !== undefined) {
-            currentClass.signals[msg.val]++;
+      // Suscribirse a un canal global en tiempo real para este código de clase
+      liveChannel = supabaseClient.channel(`room_${roomCode}`, {
+        config: { broadcast: { self: false } }
+      });
+
+      liveChannel
+        .on('broadcast', { event: 'STUDENT_JOIN' }, (payload) => {
+          if (currentRole === 'teacher') {
+            currentClass.studentsCount++;
             updateTeacherLiveStats();
+            showToast('🎓 Un alumno se ha conectado desde otro dispositivo.');
           }
-        }
-      }
-
-      // Recepción de pregunta anónima
-      if (msg.type === 'ANONYMOUS_QUESTION' && msg.code === currentClass.code) {
-        if (currentRole === 'teacher') {
-          currentClass.questions.unshift(msg.text);
-          updateTeacherLiveStats();
-          showToast('❓ Nueva pregunta anónima recibida');
-        }
-      }
+        })
+        .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
+          if (currentRole === 'teacher' && payload.payload) {
+            const { kind, val } = payload.payload;
+            if (kind && currentClass.signals[val] !== undefined) {
+              currentClass.signals[val]++;
+              updateTeacherLiveStats();
+            }
+          }
+        })
+        .on('broadcast', { event: 'ANONYMOUS_QUESTION' }, (payload) => {
+          if (currentRole === 'teacher' && payload.payload) {
+            currentClass.questions.unshift(payload.payload.text);
+            updateTeacherLiveStats();
+            showToast('❓ Nueva pregunta anónima recibida');
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`Conectado al canal en vivo multi-dispositivo: room_${roomCode}`);
+          }
+        });
     }
 
     function escapeHtml(str) {
@@ -1306,8 +556,8 @@
       document.getElementById('display-course-topic').innerText = `${course} - ${topic}`;
       document.getElementById('display-class-code').innerText = `CÓDIGO: ${currentClass.code}`;
       
-      const studentCodeInput = document.getElementById('student-class-code');
-      if (studentCodeInput) studentCodeInput.value = currentClass.code;
+      // Conectar sala multi-dispositivo para el docente
+      connectToLiveRoom(currentClass.code);
 
       updateTeacherLiveStats();
       showToast(`Clase creada con código ${currentClass.code}`);
@@ -1348,6 +598,9 @@
     function finishClass() {
       currentClass.isStarted = false;
       if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
+      if (liveChannel && supabaseClient) {
+        supabaseClient.removeChannel(liveChannel);
+      }
       showToast('Clase finalizada correctamente.');
       showScreen('teacher-dashboard');
     }
@@ -1361,50 +614,34 @@
         return;
       }
 
-      // Transmitir solicitud de unión
+      currentClass.code = code;
+
+      // Conectar sala multi-dispositivo para el alumno
+      connectToLiveRoom(code);
+
+      // Enviar señal de presencia por red global
       if (liveChannel) {
-        liveChannel.postMessage({
-          type: 'STUDENT_JOIN',
-          code: code
+        liveChannel.send({
+          type: 'broadcast',
+          event: 'STUDENT_JOIN',
+          payload: { code: code }
         });
       }
 
-      // Si se prueba en la misma pestaña/instancia local
-      if (currentClass.code && currentClass.code === code) {
-        currentClass.studentsCount++;
-        document.getElementById('student-live-course-topic').innerText = `${currentClass.course || 'Matemáticas'} - ${currentClass.topic || 'Tema General'}`;
-        updateTeacherLiveStats();
-        showToast('Te has unido a la clase anónimamente');
-        showScreen('student-live-view');
-      } else {
-        // En espera de respuesta por broadcast
-        showToast('Buscando la clase en vivo...');
-        setTimeout(() => {
-          document.getElementById('student-live-course-topic').innerText = `Clase ${code}`;
-          showScreen('student-live-view');
-        }, 600);
-      }
+      document.getElementById('student-live-course-topic').innerText = `Clase en Vivo (${code})`;
+      showToast('Te has unido a la clase anónimamente desde tu dispositivo');
+      showScreen('student-live-view');
     }
 
     function studentSendSignal(kind, val) {
-      const codeInput = document.getElementById('student-class-code');
-      const code = codeInput ? codeInput.value.trim().toUpperCase() : currentClass.code;
-
-      if (kind === 'comprension' || kind === 'ritmo') {
-        currentClass.signals[val]++;
-      }
-
       if (liveChannel) {
-        liveChannel.postMessage({
-          type: 'STUDENT_SIGNAL',
-          code: code,
-          kind: kind,
-          val: val
+        liveChannel.send({
+          type: 'broadcast',
+          event: 'STUDENT_SIGNAL',
+          payload: { kind, val }
         });
       }
-
-      updateTeacherLiveStats();
-      showToast('✓ Respuesta registrada');
+      showToast('✓ Respuesta registrada en vivo');
     }
 
     function studentSendAnonymousQuestion() {
@@ -1415,21 +652,15 @@
         return;
       }
 
-      const codeInput = document.getElementById('student-class-code');
-      const code = codeInput ? codeInput.value.trim().toUpperCase() : currentClass.code;
-
-      currentClass.questions.unshift(text);
-      input.value = '';
-
       if (liveChannel) {
-        liveChannel.postMessage({
-          type: 'ANONYMOUS_QUESTION',
-          code: code,
-          text: text
+        liveChannel.send({
+          type: 'broadcast',
+          event: 'ANONYMOUS_QUESTION',
+          payload: { text }
         });
       }
 
-      updateTeacherLiveStats();
+      input.value = '';
       showToast('Pregunta anónima enviada al profesor');
     }
 
@@ -1489,5 +720,4 @@
     window.logout = logout;
   </script>
 </body>
-</html></body>
 </html>
