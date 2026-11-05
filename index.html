@@ -318,7 +318,7 @@
 
   <!-- LÓGICA DE INTERACCIÓN Y SINCRONIZACIÓN EN TIEMPO REAL EN VIVO -->
   <script>
-    // CREDENCIALES DE SUPABASE (Reemplaza con las de tu proyecto en Supabase Dashboard)
+    // CREDENCIALES DE SUPABASE (Configuradas con tu proyecto)
     const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
     const SUPABASE_KEY = 'tu-anon-key-de-supabase';
     
@@ -352,8 +352,8 @@
       }
     };
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO (SUPABASE REALTIME)
-    function connectToLiveRoom(roomCode) {
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO (SUPABASE REALTIME) con callback de seguridad
+    function connectToLiveRoom(roomCode, onSubscribedCallback) {
       if (!supabaseClient) {
         console.warn("Supabase client no configurado. Asegúrate de poner tus URL y Key.");
         return;
@@ -363,7 +363,7 @@
         supabaseClient.removeChannel(liveChannel);
       }
 
-      // Suscribirse a un canal global en tiempo real para este código de clase
+      // Suscribirse al canal en tiempo real para este código de clase
       liveChannel = supabaseClient.channel(`room_${roomCode}`, {
         config: { broadcast: { self: false } }
       });
@@ -395,6 +395,9 @@
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log(`Conectado al canal en vivo multi-dispositivo: room_${roomCode}`);
+            if (typeof onSubscribedCallback === 'function') {
+              onSubscribedCallback();
+            }
           }
         });
     }
@@ -406,6 +409,7 @@
     function showToast(message) {
       const container = document.getElementById('toast-container');
       const msgElem = document.getElementById('toast-message');
+      if (!container || !msgElem) return;
       msgElem.innerText = message;
       container.classList.remove('opacity-0', '-translate-y-4');
       container.classList.add('opacity-100', 'translate-y-0');
@@ -464,17 +468,17 @@
       const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
 
       if (mode === 'login') {
-        btnLogin.className = activeClass;
-        btnRegister.className = inactiveClass;
-        title.innerText = 'Iniciar Sesión';
-        btnAction.innerText = 'Iniciar Sesión';
-        nameCont.classList.add('hidden');
+        if (btnLogin) btnLogin.className = activeClass;
+        if (btnRegister) btnRegister.className = inactiveClass;
+        if (title) title.innerText = 'Iniciar Sesión';
+        if (btnAction) btnAction.innerText = 'Iniciar Sesión';
+        if (nameCont) nameCont.classList.add('hidden');
       } else {
-        btnRegister.className = activeClass;
-        btnLogin.className = inactiveClass;
-        title.innerText = 'Crear Cuenta de Docente';
-        btnAction.innerText = 'Registrarse';
-        nameCont.classList.remove('hidden');
+        if (btnRegister) btnRegister.className = activeClass;
+        if (btnLogin) btnLogin.className = inactiveClass;
+        if (title) title.innerText = 'Crear Cuenta de Docente';
+        if (btnAction) btnAction.innerText = 'Registrarse';
+        if (nameCont) nameCont.classList.remove('hidden');
       }
     }
 
@@ -490,37 +494,41 @@
       const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
       const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
 
-      btnLogin.className = mode === 'login' ? activeClass : inactiveClass;
-      btnRegister.className = mode === 'register' ? activeClass : inactiveClass;
-      btnCode.className = mode === 'code' ? activeClass : inactiveClass;
+      if (btnLogin) btnLogin.className = mode === 'login' ? activeClass : inactiveClass;
+      if (btnRegister) btnRegister.className = mode === 'register' ? activeClass : inactiveClass;
+      if (btnCode) btnCode.className = mode === 'code' ? activeClass : inactiveClass;
 
       if (mode === 'login' || mode === 'register') {
-        title.innerText = mode === 'login' ? 'Iniciar Sesión Alumno' : 'Crear Cuenta Anónima';
-        btnAction.innerText = 'Continuar';
-        credsCont.classList.remove('hidden');
+        if (title) title.innerText = mode === 'login' ? 'Iniciar Sesión Alumno' : 'Crear Cuenta Anónima';
+        if (btnAction) btnAction.innerText = 'Continuar';
+        if (credsCont) credsCont.classList.remove('hidden');
       } else {
-        title.innerText = 'Ingreso Directo por Código';
-        btnAction.innerText = 'Ir a ingresar código';
-        credsCont.classList.add('hidden');
+        if (title) title.innerText = 'Ingreso Directo por Código';
+        if (btnAction) btnAction.innerText = 'Ir a ingresar código';
+        if (credsCont) credsCont.classList.add('hidden');
       }
     }
 
-    function handleTeacherAuth(e) {
+    async function handleTeacherAuth(e) {
       if (e) e.preventDefault();
-      const email = document.getElementById('teacher-email').value;
-      const nameInput = document.getElementById('teacher-name').value;
+      const emailInput = document.getElementById('teacher-email');
+      const nameInput = document.getElementById('teacher-name');
+      const email = emailInput ? emailInput.value : '';
+      const nameVal = nameInput ? nameInput.value : '';
 
-      if (teacherAuthMode === 'register' && !nameInput.trim()) {
+      if (teacherAuthMode === 'register' && !nameVal.trim()) {
         showToast('Por favor ingresa tu nombre completo.');
         return;
       }
 
       teacherProfile = {
-        name: nameInput.trim() || (email ? email.split('@')[0] : 'Carlos Mendoza'),
+        name: nameVal.trim() || (email ? email.split('@')[0] : 'Carlos Mendoza'),
         email: email
       };
 
-      document.getElementById('teacher-welcome-name').innerText = `Bienvenido, ${teacherProfile.name}`;
+      const welcomeElem = document.getElementById('teacher-welcome-name');
+      if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
+      
       showToast('¡Sesión iniciada correctamente!');
       showScreen('teacher-dashboard');
     }
@@ -536,8 +544,10 @@
     }
 
     function createAndStartClass() {
-      const course = document.getElementById('class-course').value;
-      const topic = document.getElementById('class-topic').value;
+      const courseInput = document.getElementById('class-course');
+      const topicInput = document.getElementById('class-topic');
+      const course = courseInput ? courseInput.value.trim() : '';
+      const topic = topicInput ? topicInput.value.trim() : '';
 
       if (!course || !topic) {
         showToast('Por favor completa el curso y el tema.');
@@ -553,8 +563,10 @@
       currentClass.questions = [];
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
 
-      document.getElementById('display-course-topic').innerText = `${course} - ${topic}`;
-      document.getElementById('display-class-code').innerText = `CÓDIGO: ${currentClass.code}`;
+      const topicElem = document.getElementById('display-course-topic');
+      const codeElem = document.getElementById('display-class-code');
+      if (topicElem) topicElem.innerText = `${course} - ${topic}`;
+      if (codeElem) codeElem.innerText = `CÓDIGO: ${currentClass.code}`;
       
       // Conectar sala multi-dispositivo para el docente
       connectToLiveRoom(currentClass.code);
@@ -571,26 +583,31 @@
 
       if (!currentClass.isStarted) {
         currentClass.isStarted = true;
-        btn.innerText = '⏸ Pausar Clase';
-        btn.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm';
-        dot.className = 'w-3 h-3 rounded-full bg-brand-green animate-pulse';
-        statusText.innerText = 'CLASE EN VIVO';
+        if (btn) {
+          btn.innerText = '⏸ Pausar Clase';
+          btn.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm';
+        }
+        if (dot) dot.className = 'w-3 h-3 rounded-full bg-brand-green animate-pulse';
+        if (statusText) statusText.innerText = 'CLASE EN VIVO';
 
         if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
         currentClass.timerInterval = setInterval(() => {
           currentClass.secondsElapsed++;
           const mins = String(Math.floor(currentClass.secondsElapsed / 60)).padStart(2, '0');
           const secs = String(currentClass.secondsElapsed % 60).padStart(2, '0');
-          document.getElementById('stat-class-timer').innerText = `${mins}:${secs}`;
+          const timerElem = document.getElementById('stat-class-timer');
+          if (timerElem) timerElem.innerText = `${mins}:${secs}`;
         }, 1000);
         showToast('Clase iniciada');
       } else {
         currentClass.isStarted = false;
         if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
-        btn.innerText = '▶ Reanudar Clase';
-        btn.className = 'bg-brand-green hover:bg-green-700 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm';
-        dot.className = 'w-3 h-3 rounded-full bg-amber-500';
-        statusText.innerText = 'CLASE EN PAUSA';
+        if (btn) {
+          btn.innerText = '▶ Reanudar Clase';
+          btn.className = 'bg-brand-green hover:bg-green-700 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm';
+        }
+        if (dot) dot.className = 'w-3 h-3 rounded-full bg-amber-500';
+        if (statusText) statusText.innerText = 'CLASE EN PAUSA';
         showToast('Clase en pausa');
       }
     }
@@ -616,19 +633,19 @@
 
       currentClass.code = code;
 
-      // Conectar sala multi-dispositivo para el alumno
-      connectToLiveRoom(code);
+      // Conectar sala y garantizar el envío del evento STUDENT_JOIN tras la suscripción exitosa
+      connectToLiveRoom(code, () => {
+        if (liveChannel) {
+          liveChannel.send({
+            type: 'broadcast',
+            event: 'STUDENT_JOIN',
+            payload: { code: code }
+          });
+        }
+      });
 
-      // Enviar señal de presencia por red global
-      if (liveChannel) {
-        liveChannel.send({
-          type: 'broadcast',
-          event: 'STUDENT_JOIN',
-          payload: { code: code }
-        });
-      }
-
-      document.getElementById('student-live-course-topic').innerText = `Clase en Vivo (${code})`;
+      const liveTopicElem = document.getElementById('student-live-course-topic');
+      if (liveTopicElem) liveTopicElem.innerText = `Clase en Vivo (${code})`;
       showToast('Te has unido a la clase anónimamente desde tu dispositivo');
       showScreen('student-live-view');
     }
@@ -660,7 +677,7 @@
         });
       }
 
-      input.value = '';
+      if (input) input.value = '';
       showToast('Pregunta anónima enviada al profesor');
     }
 
@@ -701,6 +718,9 @@
 
     function logout() {
       teacherProfile = null;
+      if (liveChannel && supabaseClient) {
+        supabaseClient.removeChannel(liveChannel);
+      }
       showToast('Sesión cerrada');
       showScreen('role-selector');
     }
