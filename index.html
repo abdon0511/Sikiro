@@ -8,6 +8,9 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Supabase JS Client SDK (CRÍTICO PARA QUE FUNCIONE) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Tipografías: Sora (Display) e Inter (Cuerpo) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -316,7 +319,7 @@
 
   </main>
 
-<script>
+  <script>
     // CREDENCIALES DE SUPABASE CORREGIDAS CON COMILLAS
     const SUPABASE_URL = 'https://fimesbygpbcizzgslhwq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG';
@@ -351,7 +354,7 @@
       }
     };
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON COMILLAS INVERTIDAS CORRECTAS
+    // CONECTAR AL CANAL MULTI-DISPOSITIVO CON CALLBACK DE SEGURIDAD
     function connectToLiveRoom(roomCode, onSubscribedCallback) {
       if (!supabaseClient) {
         console.warn("Supabase client no configurado.");
@@ -719,20 +722,6 @@
       showToast('Sesión cerrada');
       showScreen('role-selector');
     }
-
-    window.selectRole = selectRole;
-    window.showScreen = showScreen;
-    window.switchTeacherTab = switchTeacherTab;
-    window.switchStudentTab = switchStudentTab;
-    window.handleTeacherAuth = handleTeacherAuth;
-    window.handleStudentAuth = handleStudentAuth;
-    window.createAndStartClass = createAndStartClass;
-    window.toggleStartClass = toggleStartClass;
-    window.finishClass = finishClass;
-    window.studentJoinLiveClass = studentJoinLiveClass;
-    window.studentSendSignal = studentSendSignal;
-    window.studentSendAnonymousQuestion = studentSendAnonymousQuestion;
-    window.logout = logout;
   </script>
 </body>
 </html>
