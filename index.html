@@ -91,7 +91,7 @@
       </div>
     </section>
 
-    <!-- PANTALLA 2: AUTENTICACIÓN DOCENTE (CON PESTAÑAS LOGIN/REGISTRO Y GOOGLE) -->
+    <!-- PANTALLA 2: AUTENTICACIÓN DOCENTE -->
     <section id="screen-teacher-auth" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto space-y-6">
       <div class="flex justify-between items-center">
         <button type="button" onclick="showScreen('role-selector')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Cambiar rol</button>
@@ -279,9 +279,9 @@
     </section>
 
   </main>
-
   <script>
-    // CREDENCIALES DE SUPABASE
+
+      // CREDENCIALES DE SUPABASE
     const SUPABASE_URL = 'https://fimesbygpbcizzgslhwq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG';
     
@@ -295,6 +295,7 @@
     let liveChannel = null;
 
     let currentClass = {
+      id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
       course: '',
       topic: '',
       code: '',
@@ -303,44 +304,79 @@
       secondsElapsed: 0,
       studentsCount: 0,
       questions: [],
-      signals: {
-        seguro: 0,
-        parcial: 0,
-        perdido: 0,
-        lento: 0,
-        adecuado: 0,
-        rapido: 0
-      }
+      signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 }
     };
 
-    // LIMPIAR HASH DE SUPABASE Y VERIFICAR SESIÓN GOOGLE AL CARGAR
+    // ==========================================
+    // 1. VERIFICAR SESIÓN AL CARGAR LA PÁGINA
+    // ==========================================
     window.addEventListener('DOMContentLoaded', async () => {
       if (!supabaseClient) return;
       
-      // Limpia el token de la URL para que no muestre la pantalla en blanco
+      // Limpia el token de la URL
       if (window.location.hash && window.location.hash.includes('access_token')) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
       const { data: { session } } = await supabaseClient.auth.getSession();
+      
       if (session && session.user) {
+        // Buscamos el perfil del usuario en la base de datos
+        let { data: profile, error } = await supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        // Si el perfil no existe (primer inicio de sesión), lo creamos
+        if (!profile) {
+          // Si el usuario venía de hacer clic en "Soy Docente", el localStorage lo recordará
+          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'student';
+          
+          const { data: newProfile } = await supabaseClient.from('profiles').insert({
+            id: session.user.id,
+            role: intendedRole
+          }).select().single();
+          
+          profile = newProfile;
+          localStorage.removeItem('sikiro_intended_role');
+        }
+
         teacherProfile = {
           name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
-          email: session.user.email
+          email: session.user.email,
+          role: profile ? profile.role : 'student'
         };
-        const welcomeElem = document.getElementById('teacher-welcome-name');
-        if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
-        showToast('Sesión de Google verificada con éxito');
-        showScreen('teacher-dashboard');
+
+        showToast(`Bienvenido, ${teacherProfile.name}`);
+
+        // Redirigimos según el rol
+        if (teacherProfile.role === 'teacher') {
+          const welcomeElem = document.getElementById('teacher-welcome-name');
+          if (welcomeElem) welcomeElem.innerText = `Bienvenido, ${teacherProfile.name}`;
+          showScreen('teacher-dashboard');
+        } else {
+          showScreen('student-join');
+        }
       }
     });
 
-    // INICIAR SESIÓN CON GOOGLE (Verificación real de cuenta en Google y Supabase)
+    // ==========================================
+    // 2. INICIAR SESIÓN CON GOOGLE
+    // ==========================================
     async function handleGoogleLogin() {
       if (!supabaseClient) {
         showToast('Supabase no está configurado.');
         return;
       }
+
+      // Guardamos temporalmente el rol que el usuario seleccionó antes de ir a Google
+      if (currentRole === 'teacher') {
+        localStorage.setItem('sikiro_intended_role', 'teacher');
+      } else {
+        localStorage.setItem('sikiro_intended_role', 'student');
+      }
+
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -352,12 +388,11 @@
       }
     }
 
-    // CONECTAR AL CANAL MULTI-DISPOSITIVO
+    // ==========================================
+    // 3. CONECTAR AL CANAL EN VIVO (REALTIME)
+    // ==========================================
     function connectToLiveRoom(roomCode, onSubscribedCallback) {
-      if (!supabaseClient) {
-        console.warn("Supabase client no configurado.");
-        return;
-      }
+      if (!supabaseClient) return;
 
       if (liveChannel) {
         supabaseClient.removeChannel(liveChannel);
@@ -372,7 +407,7 @@
           if (currentRole === 'teacher') {
             currentClass.studentsCount++;
             updateTeacherLiveStats();
-            showToast('🎓 Un alumno se ha conectado desde otro dispositivo.');
+            showToast('🎓 Un alumno se ha conectado.');
           }
         })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
@@ -392,15 +427,15 @@
           }
         })
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`Conectado al canal en vivo multi-dispositivo: room_${roomCode}`);
-            if (typeof onSubscribedCallback === 'function') {
-              onSubscribedCallback();
-            }
+          if (status === 'SUBSCRIBED' && typeof onSubscribedCallback === 'function') {
+            onSubscribedCallback();
           }
         });
     }
 
+    // ==========================================
+    // 4. FUNCIONES DE LA INTERFAZ
+    // ==========================================
     function escapeHtml(str) {
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
@@ -419,16 +454,7 @@
     }
 
     function showScreen(screenName) {
-      const screens = [
-        'role-selector',
-        'teacher-auth',
-        'student-auth',
-        'teacher-dashboard',
-        'teacher-live-class',
-        'student-join',
-        'student-live-view'
-      ];
-
+      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-live-class', 'student-join', 'student-live-view'];
       screens.forEach(s => {
         const elem = document.getElementById(`screen-${s}`);
         if (elem) elem.classList.add('hidden');
@@ -441,11 +467,11 @@
       if (status) {
         if (screenName === 'role-selector') status.innerText = 'Selecciona tu rol';
         if (screenName === 'teacher-auth') status.innerText = 'Portal Docente';
-        if (screenName === 'student-auth') status.innerText = 'Portal Alumno (Anónimo)';
+        if (screenName === 'student-auth') status.innerText = 'Portal Alumno';
         if (screenName === 'teacher-dashboard') status.innerText = teacherProfile ? `Prof. ${teacherProfile.name}` : 'Panel Docente';
         if (screenName === 'teacher-live-class') status.innerText = `Clase en Vivo: ${currentClass.code}`;
-        if (screenName === 'student-join') status.innerText = 'Alumno Anónimo';
-        if (screenName === 'student-live-view') status.innerText = 'En Clase (Anónimo)';
+        if (screenName === 'student-join') status.innerText = 'Alumno';
+        if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
     }
 
@@ -459,7 +485,6 @@
       const btnLogin = document.getElementById('tab-teacher-login');
       const btnRegister = document.getElementById('tab-teacher-register');
       const title = document.getElementById('teacher-auth-title');
-
       const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
       const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
 
@@ -476,10 +501,15 @@
 
     function handleStudentAuth(e) {
       if (e) e.preventDefault();
-      showScreen('student-join');
+      // Si el alumno decidió usar Google, lo mandamos a loguearse. 
+      // Si no, lo mandamos directo a ingresar el código.
+      handleGoogleLogin(); 
     }
 
-    function createAndStartClass() {
+    // ==========================================
+    // 5. CREAR CLASE (GUARDANDO EN SUPABASE)
+    // ==========================================
+    async function createAndStartClass() {
       const courseInput = document.getElementById('class-course');
       const topicInput = document.getElementById('class-topic');
       const course = courseInput ? courseInput.value.trim() : '';
@@ -490,9 +520,29 @@
         return;
       }
 
-      currentClass.course = course;
-      currentClass.topic = topic;
-      currentClass.code = Math.random().toString(36).substring(2, 6).toUpperCase();
+      if (!supabaseClient || !teacherProfile) {
+        showToast('Debes iniciar sesión como docente.');
+        return;
+      }
+
+      showToast('Creando clase en la base de datos...');
+
+      // Llamamos a la función SQL que creaste en Supabase
+      const { data, error } = await supabaseClient.rpc('create_sikiro_class', {
+        p_course: course,
+        p_topic: topic
+      });
+
+      if (error) {
+        showToast('Error al crear clase: ' + error.message);
+        return;
+      }
+
+      // Supabase nos devuelve el ID, el código de 4 dígitos, etc.
+      currentClass.id = data.id;
+      currentClass.course = data.course;
+      currentClass.topic = data.topic;
+      currentClass.code = data.code;
       currentClass.isStarted = false;
       currentClass.secondsElapsed = 0;
       currentClass.studentsCount = 0;
@@ -505,18 +555,29 @@
       if (codeElem) codeElem.innerText = `CÓDIGO: ${currentClass.code}`;
       
       connectToLiveRoom(currentClass.code);
-
       updateTeacherLiveStats();
       showToast(`Clase creada con código ${currentClass.code}`);
       showScreen('teacher-live-class');
     }
 
-    function toggleStartClass() {
+    // ==========================================
+    // 6. CONTROLES DE LA CLASE (PROFESOR)
+    // ==========================================
+    async function toggleStartClass() {
       const btn = document.getElementById('btn-start-class');
       const dot = document.getElementById('class-status-dot');
       const statusText = document.getElementById('class-status-text');
+      const newStatus = !currentClass.isStarted;
 
-      if (!currentClass.isStarted) {
+      // Actualizamos el estado en la base de datos
+      if (currentClass.id) {
+        await supabaseClient.rpc('set_sikiro_class_status', {
+          p_class_id: currentClass.id,
+          p_status: newStatus ? 'active' : 'paused'
+        });
+      }
+
+      if (newStatus) {
         currentClass.isStarted = true;
         if (btn) {
           btn.innerText = '⏸ Pausar Clase';
@@ -547,79 +608,108 @@
       }
     }
 
-    function finishClass() {
+    async function finishClass() {
+      if (!currentClass.id) return;
+
+      // Finalizamos en la base de datos y obtenemos estadísticas
+      await supabaseClient.rpc('finish_sikiro_class', { p_class_id: currentClass.id });
+      const { data: stats } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: currentClass.id });
+
       currentClass.isStarted = false;
       if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
-      if (liveChannel && supabaseClient) {
-        supabaseClient.removeChannel(liveChannel);
-      }
-      showToast('Clase finalizada correctamente.');
+      if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
+      
+      showToast('Clase finalizada. Informe guardado.');
+      
+      // Aquí podrías mostrar una pantalla de resultados si tuvieras una.
+      // Por ahora, volvemos al inicio.
       showScreen('teacher-dashboard');
+      currentClass.id = null;
     }
 
-    // VALIDACIÓN ESTRICTA DE 4 DÍGITOS PARA ALUMNOS
-    function studentJoinLiveClass() {
+    // ==========================================
+    // 7. ACCIONES DEL ALUMNO
+    // ==========================================
+    async function studentJoinLiveClass() {
       const codeInput = document.getElementById('student-class-code');
       const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
       if (code.length !== 4) {
-        showToast('El código debe ser estrictamente de 4 dígitos.');
+        showToast('El código debe ser de 4 dígitos.');
         return;
       }
 
-      currentClass.code = code;
+      showToast('Buscando clase...');
 
+      // Llamamos a la función SQL que valida el código y guarda al participante
+      const { data, error } = await supabaseClient.rpc('join_sikiro_class', { p_code: code });
+
+      if (error) {
+        showToast('Error al unirse: ' + error.message);
+        return;
+      }
+
+      // Guardamos la info devuelta por la BD
+      currentClass.id = data.class_id;
+      currentClass.code = code;
+      
       connectToLiveRoom(code, () => {
         if (liveChannel) {
-          liveChannel.send({
-            type: 'broadcast',
-            event: 'STUDENT_JOIN',
-            payload: { code: code }
-          });
+          liveChannel.send({ type: 'broadcast', event: 'STUDENT_JOIN', payload: { code: code } });
         }
       });
 
       const liveTopicElem = document.getElementById('student-live-course-topic');
       if (liveTopicElem) liveTopicElem.innerText = `Clase en Vivo (${code})`;
-      showToast('Te has unido a la clase anónimamente');
+      
+      showToast('Te has unido a la clase');
       showScreen('student-live-view');
     }
 
-    function studentSendSignal(kind, val) {
+    async function studentSendSignal(kind, val) {
+      if (!currentClass.id || !supabaseClient) return;
+
+      // Guardamos la señal en Supabase
+      await supabaseClient.rpc('send_sikiro_signal', {
+        p_class_id: currentClass.id,
+        p_kind: kind,
+        p_value: val
+      });
+
+      // También la enviamos en vivo para que el profesor la vea al instante
       if (liveChannel) {
-        liveChannel.send({
-          type: 'broadcast',
-          event: 'STUDENT_SIGNAL',
-          payload: { kind, val }
-        });
+        liveChannel.send({ type: 'broadcast', event: 'STUDENT_SIGNAL', payload: { kind, val } });
       }
-      showToast('✓ Respuesta registrada en vivo');
+      showToast('✓ Respuesta registrada');
     }
 
-    function studentSendAnonymousQuestion() {
+    async function studentSendAnonymousQuestion() {
       const input = document.getElementById('student-anonymous-question-input');
       const text = input ? input.value.trim() : '';
-      if (!text) {
+      if (!text || !currentClass.id || !supabaseClient) {
         showToast('Escribe una pregunta');
         return;
       }
 
+      // Guardamos la pregunta ANÓNIMA en Supabase (sin participant_id)
+      await supabaseClient.rpc('send_sikiro_question', {
+        p_class_id: currentClass.id,
+        p_content: text
+      });
+
+      // La enviamos en vivo para el panel del profesor
       if (liveChannel) {
-        liveChannel.send({
-          type: 'broadcast',
-          event: 'ANONYMOUS_QUESTION',
-          payload: { text }
-        });
+        liveChannel.send({ type: 'broadcast', event: 'ANONYMOUS_QUESTION', payload: { text } });
       }
 
       if (input) input.value = '';
-      showToast('Pregunta anónima enviada al profesor');
+      showToast('Pregunta anónima enviada');
     }
 
     function updateTeacherLiveStats() {
       const studElem = document.getElementById('stat-students-count');
       if (studElem) studElem.innerText = currentClass.studentsCount;
-
+      // El resto de la lógica visual de estadísticas se mantiene igual...
       const { lento, adecuado, rapido } = currentClass.signals;
       let paceText = 'Adecuado';
       if (rapido > adecuado && rapido > lento) paceText = 'Rápido ⚡';
@@ -630,9 +720,7 @@
       const { seguro, parcial, perdido } = currentClass.signals;
       const totalComp = seguro + parcial + perdido;
       let score = 100;
-      if (totalComp > 0) {
-        score = Math.round(((seguro * 1.0 + parcial * 0.5) / totalComp) * 100);
-      }
+      if (totalComp > 0) score = Math.round(((seguro * 1.0 + parcial * 0.5) / totalComp) * 100);
       const compElem = document.getElementById('stat-comprehension-score');
       if (compElem) compElem.innerText = `${score}%`;
 
@@ -652,13 +740,9 @@
     }
 
     async function logout() {
-      if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-      }
+      if (supabaseClient) await supabaseClient.auth.signOut();
       teacherProfile = null;
-      if (liveChannel && supabaseClient) {
-        supabaseClient.removeChannel(liveChannel);
-      }
+      if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
       showToast('Sesión cerrada');
       showScreen('role-selector');
     }
@@ -675,6 +759,6 @@
     window.studentSendSignal = studentSendSignal;
     window.studentSendAnonymousQuestion = studentSendAnonymousQuestion;
     window.logout = logout;
-  </script>
+    </script>
 </body>
 </html>
