@@ -527,7 +527,7 @@
 
       showToast('Creando clase en la base de datos...');
 
-      // Llamamos a la función SQL que creaste en Supabase
+           // Llamamos a la función SQL que creaste en Supabase
       const { data, error } = await supabaseClient.rpc('create_sikiro_class', {
         p_course: course,
         p_topic: topic
@@ -535,20 +535,20 @@
 
       if (error) {
         showToast('Error al crear clase: ' + error.message);
+        console.error("Error de Supabase:", error);
         return;
       }
 
-      // Supabase nos devuelve el ID, el código de 4 dígitos, etc.
-      currentClass.id = data.id;
-      currentClass.course = data.course;
-      currentClass.topic = data.topic;
-      currentClass.code = data.code;
+      // EL ARREGLO: Supabase devuelve un arreglo [], así que leemos la posición [0]
+      currentClass.id = data[0].class_id; 
+      currentClass.code = data[0].code;
+      currentClass.course = course;
+      currentClass.topic = topic;
       currentClass.isStarted = false;
       currentClass.secondsElapsed = 0;
       currentClass.studentsCount = 0;
       currentClass.questions = [];
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
-
       const topicElem = document.getElementById('display-course-topic');
       const codeElem = document.getElementById('display-class-code');
       if (topicElem) topicElem.innerText = `${course} - ${topic}`;
