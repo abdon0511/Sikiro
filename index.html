@@ -334,7 +334,7 @@
 
         // Si no existe el perfil, lo creamos leyendo el rol que el usuario eligió
         if (!profile) {
-          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'student';
+          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'teacher';
           
           const { data: newProfile } = await supabaseClient.from('profiles').insert({
             id: session.user.id,
