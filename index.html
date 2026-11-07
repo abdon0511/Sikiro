@@ -482,8 +482,11 @@
       }
     }
 
-    function selectRole(role) {
+       function selectRole(role) {
       currentRole = role;
+      // Guardamos el rol inmediatamente en la memoria para que no se pierda al ir a Google
+      localStorage.setItem('sikiro_intended_role', role);
+      
       if (role === 'teacher') showScreen('teacher-auth');
       else showScreen('student-auth');
     }
