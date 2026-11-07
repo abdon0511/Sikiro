@@ -366,11 +366,14 @@
     // ==========================================
     // 2. INICIAR SESIÓN CON GOOGLE
     // ==========================================
-    async function handleGoogleLogin() {
+       async function handleGoogleLogin() {
       if (!supabaseClient) return;
 
-      // Guardamos el rol en la memoria ANTES de ir a Google
-      if (currentRole === 'teacher') {
+      // Forzamos a que el rol sea 'teacher' si estamos en la pantalla de docente
+      // O 'student' si estamos en la de alumno
+      const isTeacherScreen = document.getElementById('screen-teacher-auth').classList.contains('hidden') === false;
+      
+      if (isTeacherScreen) {
         localStorage.setItem('sikiro_intended_role', 'teacher');
       } else {
         localStorage.setItem('sikiro_intended_role', 'student');
