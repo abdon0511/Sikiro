@@ -286,16 +286,11 @@
     </section>
 
   </main>
-     <script>
-    // CREDENCIALES DE SUPABASE
+   <script>
     const SUPABASE_URL = 'https://fimesbygpbcizzgslhwq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_lH_GQB0MW4FiXzZ2xiY6aQ_oVSkjImG';
     
-    let supabaseClient = null;
-    if (window.supabase) {
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
-
+    let supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
     let currentRole = null;
     let teacherProfile = null;
     let liveChannel = null;
@@ -306,37 +301,37 @@
       questions: [], signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 }
     };
 
-    // ==========================================
-    // 1. VERIFICAR SESIÓN AL CARGAR LA PÁGINA
-    // ==========================================
+    // 1. VERIFICAR SESIÓN (Priorizando la elección del usuario)
     window.addEventListener('DOMContentLoaded', async () => {
       if (!supabaseClient) return;
       
-      // Limpia el token de la URL
       if (window.location.hash && window.location.hash.includes('access_token')) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
       const { data: { session } } = await supabaseClient.auth.getSession();
       
-           if (session && session.user) {
-        // 1. Buscamos el perfil del usuario actual
-        let { data: profile } = await supabaseClient
-          .from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+      if (session && session.user) {
+        // Leemos el rol que el usuario eligió justo antes de ir a Google
+        let intendedRole = localStorage.getItem('sikiro_intended_role') || 'student';
 
-        // 2. Si el perfil NO existe, lo creamos usando el rol que eligió en pantalla
+        let { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+
+        // SI EL PERFIL NO EXISTE, O SI EL USUARIO ELIGIÓ DOCENTE, LO CREAMOS/ACTUALIZAMOS
         if (!profile) {
-          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'teacher'; // Por defecto será teacher
-          const { data: newProfile } = await supabaseClient
-            .from('profiles').insert({ 
-                id: session.user.id, 
-                role: intendedRole,
-                display_name: session.user.user_metadata?.full_name || 'Usuario'
-            }).select().single();
-          
+          const { data: newProfile } = await supabaseClient.from('profiles').insert({
+            id: session.user.id,
+            role: intendedRole,
+            display_name: session.user.user_metadata?.full_name || 'Usuario'
+          }).select().single();
           profile = newProfile;
-          localStorage.removeItem('sikiro_intended_role');
+        } else if (intendedRole === 'teacher' && profile.role !== 'teacher') {
+          // SI SU PERFIL VIEJO DECÍA ALUMNO PERO ACABA DE HACER CLIC EN DOCENTE, LO CORREGIMOS
+          await supabaseClient.from('profiles').update({ role: 'teacher' }).eq('id', session.user.id);
+          profile.role = 'teacher';
         }
+
+        localStorage.removeItem('sikiro_intended_role'); // Limpiamos la memoria
 
         teacherProfile = {
           name: session.user.user_metadata?.full_name || session.user.email.split('@')[0],
@@ -346,7 +341,6 @@
 
         showToast(`Bienvenido, ${teacherProfile.name}`);
 
-        // 3. Redirigimos según el rol guardado en la base de datos
         if (teacherProfile.role === 'teacher') {
           document.getElementById('teacher-welcome-name').innerText = `Bienvenido, ${teacherProfile.name}`;
           showScreen('teacher-dashboard');
@@ -354,92 +348,56 @@
           showScreen('student-join');
         }
       }
-    // ==========================================
-    // 2. INICIAR SESIÓN (GUARDANDO EL ROL CORRECTO)
-    // ==========================================
+    });
+
+    // 2. LOGIN CON GOOGLE
     async function handleGoogleLogin() {
       if (!supabaseClient) return;
-
-      // Guardamos el rol en la memoria ANTES de ir a Google
-      // Si currentRole no está definido, usamos el que está en el HTML
-      const roleToSave = currentRole || (document.getElementById('screen-teacher-auth').classList.contains('hidden') ? 'student' : 'teacher');
-      localStorage.setItem('sikiro_intended_role', roleToSave);
+      const isTeacherScreen = !document.getElementById('screen-teacher-auth').classList.contains('hidden');
+      localStorage.setItem('sikiro_intended_role', isTeacherScreen ? 'teacher' : 'student');
 
       const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + window.location.pathname }
+        provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname }
       });
-      if (error) showToast('Error al iniciar sesión: ' + error.message);
+      if (error) showToast('Error: ' + error.message);
     }
 
-    // ==========================================
-    // 3. CONECTAR AL CANAL EN VIVO (REALTIME)
-    // ==========================================
-    function connectToLiveRoom(roomCode, onSubscribedCallback) {
+    // 3. CANAL EN VIVO
+    function connectToLiveRoom(roomCode, callback) {
       if (!supabaseClient) return;
       if (liveChannel) supabaseClient.removeChannel(liveChannel);
-
       liveChannel = supabaseClient.channel(`room_${roomCode}`, { config: { broadcast: { self: false } } });
 
       liveChannel
-        .on('broadcast', { event: 'STUDENT_JOIN' }, (payload) => {
-          if (currentRole === 'teacher') {
-            currentClass.studentsCount++;
-            updateTeacherLiveStats();
-            showToast('🎓 Un alumno se ha conectado.');
-          }
+        .on('broadcast', { event: 'STUDENT_JOIN' }, () => {
+          if (currentRole === 'teacher') { currentClass.studentsCount++; updateTeacherLiveStats(); showToast('🎓 Alumno conectado'); }
         })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
           if (currentRole === 'teacher' && payload.payload) {
             const { kind, val } = payload.payload;
-            if (kind && currentClass.signals[val] !== undefined) {
-              currentClass.signals[val]++;
-              updateTeacherLiveStats();
-            }
+            if (currentClass.signals[val] !== undefined) { currentClass.signals[val]++; updateTeacherLiveStats(); }
           }
         })
         .on('broadcast', { event: 'ANONYMOUS_QUESTION' }, (payload) => {
-          if (currentRole === 'teacher' && payload.payload) {
-            currentClass.questions.unshift(payload.payload.text);
-            updateTeacherLiveStats();
-          }
+          if (currentRole === 'teacher' && payload.payload) { currentClass.questions.unshift(payload.payload.text); updateTeacherLiveStats(); }
         })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED' && typeof onSubscribedCallback === 'function') {
-            onSubscribedCallback();
-          }
-        });
+        .subscribe((status) => { if (status === 'SUBSCRIBED' && callback) callback(); });
     }
 
-    // ==========================================
     // 4. INTERFAZ
-    // ==========================================
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function showToast(message) {
+    function escapeHtml(str) { return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    function showToast(msg) {
       const container = document.getElementById('toast-container');
       const msgElem = document.getElementById('toast-message');
       if (!container || !msgElem) return;
-      msgElem.innerText = message;
-      container.classList.remove('opacity-0', '-translate-y-4');
-      container.classList.add('opacity-100', 'translate-y-0');
-      setTimeout(() => {
-        container.classList.remove('opacity-100', 'translate-y-0');
-        container.classList.add('opacity-0', '-translate-y-4');
-      }, 3000);
+      msgElem.innerText = msg;
+      container.classList.remove('opacity-0', '-translate-y-4'); container.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => { container.classList.remove('opacity-100', 'translate-y-0'); container.classList.add('opacity-0', '-translate-y-4'); }, 3000);
     }
-
     function showScreen(screenName) {
       const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-live-class', 'student-join', 'student-live-view'];
-      screens.forEach(s => {
-        const elem = document.getElementById(`screen-${s}`);
-        if (elem) elem.classList.add('hidden');
-      });
-      const target = document.getElementById(`screen-${screenName}`);
-      if (target) target.classList.remove('hidden');
-
+      screens.forEach(s => { const el = document.getElementById(`screen-${s}`); if (el) el.classList.add('hidden'); });
+      const target = document.getElementById(`screen-${screenName}`); if (target) target.classList.remove('hidden');
       const status = document.getElementById('user-status');
       if (status) {
         if (screenName === 'role-selector') status.innerText = 'Selecciona tu rol';
@@ -451,208 +409,121 @@
         if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
     }
-
     function selectRole(role) {
-      currentRole = role;
-      localStorage.setItem('sikiro_intended_role', role);
-      if (role === 'teacher') showScreen('teacher-auth');
-      else showScreen('student-auth');
+      currentRole = role; localStorage.setItem('sikiro_intended_role', role);
+      if (role === 'teacher') showScreen('teacher-auth'); else showScreen('student-auth');
     }
-
     function switchTeacherTab(mode) {
-      const btnLogin = document.getElementById('tab-teacher-login');
-      const btnRegister = document.getElementById('tab-teacher-register');
-      const title = document.getElementById('teacher-auth-title');
-      const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
-      const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
-      if (mode === 'login') {
-        if (btnLogin) btnLogin.className = activeClass;
-        if (btnRegister) btnRegister.className = inactiveClass;
-        if (title) title.innerText = 'Iniciar Sesión';
-      } else {
-        if (btnRegister) btnRegister.className = activeClass;
-        if (btnLogin) btnLogin.className = inactiveClass;
-        if (title) title.innerText = 'Crear Cuenta de Docente';
-      }
+      const btnL = document.getElementById('tab-teacher-login'), btnR = document.getElementById('tab-teacher-register'), title = document.getElementById('teacher-auth-title');
+      const active = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition', inactive = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
+      if (mode === 'login') { if(btnL) btnL.className = active; if(btnR) btnR.className = inactive; if(title) title.innerText = 'Iniciar Sesión'; }
+      else { if(btnR) btnR.className = active; if(btnL) btnL.className = inactive; if(title) title.innerText = 'Crear Cuenta de Docente'; }
     }
+    function handleStudentAuth(e) { if (e) e.preventDefault(); handleGoogleLogin(); }
 
-    function handleStudentAuth(e) {
-      if (e) e.preventDefault();
-      handleGoogleLogin(); 
-    }
-
-    // ==========================================
-    // 5. CREAR CLASE
-    // ==========================================
+    // 5. PROFESOR
     async function createAndStartClass() {
       const course = document.getElementById('class-course').value.trim();
       const topic = document.getElementById('class-topic').value.trim();
-
-      if (!course || !topic) { showToast('Completa el curso y el tema.'); return; }
-
+      if (!course || !topic) { showToast('Completa curso y tema'); return; }
+      
       showToast('Creando clase...');
-
-      const { data, error } = await supabaseClient.rpc('create_sikiro_class', {
-        p_course: course, p_topic: topic
-      });
-
+      const { data, error } = await supabaseClient.rpc('create_sikiro_class', { p_course: course, p_topic: topic });
       if (error) { showToast('Error: ' + error.message); return; }
 
-      currentClass.id = data[0].class_id; 
-      currentClass.code = data[0].code;
-      currentClass.course = course;
-      currentClass.topic = topic;
-      currentClass.isStarted = false;
-      currentClass.secondsElapsed = 0;
-      currentClass.studentsCount = 0;
-      currentClass.questions = [];
+      currentClass.id = data[0].class_id; currentClass.code = data[0].code;
+      currentClass.course = course; currentClass.topic = topic; currentClass.isStarted = false;
+      currentClass.secondsElapsed = 0; currentClass.studentsCount = 0; currentClass.questions = [];
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
       
       document.getElementById('display-course-topic').innerText = `${course} - ${topic}`;
       document.getElementById('display-class-code').innerText = `CÓDIGO: ${currentClass.code}`;
       
-      connectToLiveRoom(currentClass.code);
-      updateTeacherLiveStats();
-      showScreen('teacher-live-class');
+      connectToLiveRoom(currentClass.code); updateTeacherLiveStats(); showScreen('teacher-live-class');
     }
-
-    // ==========================================
-    // 6. CONTROLES DEL PROFESOR
-    // ==========================================
     async function toggleStartClass() {
-      const btn = document.getElementById('btn-start-class');
-      const dot = document.getElementById('class-status-dot');
-      const statusText = document.getElementById('class-status-text');
+      const btn = document.getElementById('btn-start-class'), dot = document.getElementById('class-status-dot'), statusText = document.getElementById('class-status-text');
       const newStatus = !currentClass.isStarted;
-
-      if (currentClass.id) {
-        await supabaseClient.rpc('set_sikiro_class_status', {
-          p_class_id: currentClass.id, p_status: newStatus ? 'active' : 'paused'
-        });
-      }
-
+      if (currentClass.id) await supabaseClient.rpc('set_sikiro_class_status', { p_class_id: currentClass.id, p_status: newStatus ? 'active' : 'paused' });
       if (newStatus) {
         currentClass.isStarted = true;
-        if (btn) { btn.innerText = '⏸ Pausar Clase'; btn.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm'; }
-        if (dot) dot.className = 'w-3 h-3 rounded-full bg-brand-green animate-pulse';
-        if (statusText) statusText.innerText = 'CLASE EN VIVO';
-
+        if(btn) { btn.innerText = '⏸ Pausar Clase'; btn.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm'; }
+        if(dot) dot.className = 'w-3 h-3 rounded-full bg-brand-green animate-pulse';
+        if(statusText) statusText.innerText = 'CLASE EN VIVO';
         if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
         currentClass.timerInterval = setInterval(() => {
           currentClass.secondsElapsed++;
-          const mins = String(Math.floor(currentClass.secondsElapsed / 60)).padStart(2, '0');
-          const secs = String(currentClass.secondsElapsed % 60).padStart(2, '0');
-          const timerElem = document.getElementById('stat-class-timer');
-          if (timerElem) timerElem.innerText = `${mins}:${secs}`;
+          const m = String(Math.floor(currentClass.secondsElapsed/60)).padStart(2,'0'), s = String(currentClass.secondsElapsed%60).padStart(2,'0');
+          const el = document.getElementById('stat-class-timer'); if(el) el.innerText = `${m}:${s}`;
         }, 1000);
       } else {
         currentClass.isStarted = false;
         if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
-        if (btn) { btn.innerText = '▶ Reanudar Clase'; btn.className = 'bg-brand-green hover:bg-green-700 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm'; }
-        if (dot) dot.className = 'w-3 h-3 rounded-full bg-amber-500';
-        if (statusText) statusText.innerText = 'CLASE EN PAUSA';
+        if(btn) { btn.innerText = '▶ Reanudar Clase'; btn.className = 'bg-brand-green hover:bg-green-700 text-white font-bold text-xs px-5 py-2.5 rounded-full transition shadow-sm'; }
+        if(dot) dot.className = 'w-3 h-3 rounded-full bg-amber-500';
+        if(statusText) statusText.innerText = 'CLASE EN PAUSA';
       }
     }
-
     async function finishClass() {
       if (!currentClass.id) return;
       await supabaseClient.rpc('finish_sikiro_class', { p_class_id: currentClass.id });
       currentClass.isStarted = false;
       if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
       if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
-      showToast('Clase finalizada.');
-      showScreen('teacher-dashboard');
-      currentClass.id = null;
+      showToast('Clase finalizada'); showScreen('teacher-dashboard'); currentClass.id = null;
     }
 
-    // ==========================================
-    // 7. ACCIONES DEL ALUMNO
-    // ==========================================
+    // 6. ALUMNO
     async function studentJoinLiveClass() {
       const code = document.getElementById('student-class-code').value.trim().toUpperCase();
-      if (code.length !== 4) { showToast('El código debe ser de 4 caracteres.'); return; }
-
+      if (code.length !== 4) { showToast('Código de 4 caracteres'); return; }
       showToast('Buscando clase...');
       const { data, error } = await supabaseClient.rpc('join_sikiro_class', { p_code: code });
-
       if (error) { showToast('Error: ' + error.message); return; }
-
-      currentClass.id = data[0].class_id;
-      currentClass.code = code;
       
-      connectToLiveRoom(code, () => {
-        if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'STUDENT_JOIN', payload: { code: code } });
-      });
-
+      currentClass.id = data[0].class_id; currentClass.code = code;
+      connectToLiveRoom(code, () => { if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'STUDENT_JOIN', payload: { code } }); });
       document.getElementById('student-live-course-topic').innerText = `Clase en Vivo (${code})`;
       showScreen('student-live-view');
     }
-
     async function studentSendSignal(kind, val) {
       if (!currentClass.id || !supabaseClient) return;
       await supabaseClient.rpc('send_sikiro_signal', { p_class_id: currentClass.id, p_kind: kind, p_value: val });
       if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'STUDENT_SIGNAL', payload: { kind, val } });
       showToast('✓ Respuesta registrada');
     }
-
     async function studentSendAnonymousQuestion() {
       const input = document.getElementById('student-anonymous-question-input');
       const text = input.value.trim();
       if (!text || !currentClass.id || !supabaseClient) return;
-
       await supabaseClient.rpc('send_sikiro_question', { p_class_id: currentClass.id, p_content: text });
       if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'ANONYMOUS_QUESTION', payload: { text } });
-      input.value = '';
-      showToast('Pregunta enviada');
+      input.value = ''; showToast('Pregunta enviada');
     }
-
     function updateTeacherLiveStats() {
       document.getElementById('stat-students-count').innerText = currentClass.studentsCount;
-      
       const { lento, adecuado, rapido } = currentClass.signals;
-      let paceText = 'Adecuado';
-      if (rapido > adecuado && rapido > lento) paceText = 'Rápido ⚡';
-      else if (lento > adecuado && lento > rapido) paceText = 'Lento 🐢';
-      document.getElementById('stat-pace-status').innerText = paceText;
-
+      let pace = 'Adecuado'; if (rapido > adecuado && rapido > lento) pace = 'Rápido ⚡'; else if (lento > adecuado && lento > rapido) pace = 'Lento 🐢';
+      document.getElementById('stat-pace-status').innerText = pace;
       const { seguro, parcial, perdido } = currentClass.signals;
-      const totalComp = seguro + parcial + perdido;
-      let score = 100;
-      if (totalComp > 0) score = Math.round(((seguro * 1.0 + parcial * 0.5) / totalComp) * 100);
+      const total = seguro + parcial + perdido; let score = 100;
+      if (total > 0) score = Math.round(((seguro * 1.0 + parcial * 0.5) / total) * 100);
       document.getElementById('stat-comprehension-score').innerText = `${score}%`;
-
-      const questionsContainer = document.getElementById('teacher-anonymous-questions');
-      if (currentClass.questions.length === 0) {
-        questionsContainer.innerHTML = '<p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>';
-      } else {
-        questionsContainer.innerHTML = currentClass.questions.map(q => `
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-800 flex justify-between items-center shadow-sm">
-            <span>"${escapeHtml(q)}"</span>
-            <span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded">Anónimo</span>
-          </div>
-        `).join('');
-      }
+      const container = document.getElementById('teacher-anonymous-questions');
+      if (currentClass.questions.length === 0) container.innerHTML = '<p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>';
+      else container.innerHTML = currentClass.questions.map(q => `<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-800 flex justify-between items-center shadow-sm"><span>"${escapeHtml(q)}"</span><span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded">Anónimo</span></div>`).join('');
     }
-
     async function logout() {
       if (supabaseClient) await supabaseClient.auth.signOut();
-      teacherProfile = null;
-      if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
-      showToast('Sesión cerrada');
-      showScreen('role-selector');
+      teacherProfile = null; if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
+      showToast('Sesión cerrada'); showScreen('role-selector');
     }
 
-    window.selectRole = selectRole;
-    window.showScreen = showScreen;
-    window.switchTeacherTab = switchTeacherTab;
-    window.handleGoogleLogin = handleGoogleLogin;
-    window.handleStudentAuth = handleStudentAuth;
-    window.createAndStartClass = createAndStartClass;
-    window.toggleStartClass = toggleStartClass;
-    window.finishClass = finishClass;
-    window.studentJoinLiveClass = studentJoinLiveClass;
-    window.studentSendSignal = studentSendSignal;
-    window.studentSendAnonymousQuestion = studentSendAnonymousQuestion;
+    window.selectRole = selectRole; window.showScreen = showScreen; window.switchTeacherTab = switchTeacherTab;
+    window.handleGoogleLogin = handleGoogleLogin; window.handleStudentAuth = handleStudentAuth;
+    window.createAndStartClass = createAndStartClass; window.toggleStartClass = toggleStartClass;
+    window.finishClass = finishClass; window.studentJoinLiveClass = studentJoinLiveClass;
+    window.studentSendSignal = studentSendSignal; window.studentSendAnonymousQuestion = studentSendAnonymousQuestion;
     window.logout = logout;
   </script>
 </body>
