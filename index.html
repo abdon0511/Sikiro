@@ -319,18 +319,22 @@
 
       const { data: { session } } = await supabaseClient.auth.getSession();
       
-      if (session && session.user) {
-        // Buscamos el perfil
-        let { data: profile, error } = await supabaseClient
+           if (session && session.user) {
+        // 1. Buscamos el perfil del usuario actual
+        let { data: profile } = await supabaseClient
           .from('profiles').select('role').eq('id', session.user.id).maybeSingle();
 
-        // Si no existe el perfil (primer inicio de sesión), lo creamos
+        // 2. Si el perfil NO existe, lo creamos usando el rol que eligió en pantalla
         if (!profile) {
-          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'student';
-          const { data: newProfile, error: insertError } = await supabaseClient
-            .from('profiles').insert({ id: session.user.id, role: intendedRole }).select().single();
+          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'teacher'; // Por defecto será teacher
+          const { data: newProfile } = await supabaseClient
+            .from('profiles').insert({ 
+                id: session.user.id, 
+                role: intendedRole,
+                display_name: session.user.user_metadata?.full_name || 'Usuario'
+            }).select().single();
           
-          if (newProfile) profile = newProfile;
+          profile = newProfile;
           localStorage.removeItem('sikiro_intended_role');
         }
 
@@ -342,7 +346,7 @@
 
         showToast(`Bienvenido, ${teacherProfile.name}`);
 
-        // REDIRECCIÓN INTELIGENTE
+        // 3. Redirigimos según el rol guardado en la base de datos
         if (teacherProfile.role === 'teacher') {
           document.getElementById('teacher-welcome-name').innerText = `Bienvenido, ${teacherProfile.name}`;
           showScreen('teacher-dashboard');
@@ -350,8 +354,6 @@
           showScreen('student-join');
         }
       }
-    });
-
     // ==========================================
     // 2. INICIAR SESIÓN (GUARDANDO EL ROL CORRECTO)
     // ==========================================
