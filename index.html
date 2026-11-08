@@ -102,7 +102,7 @@
       <button type="button" onclick="showScreen('role-selector')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🏠 Inicio</button>
       <div id="sidebar-teacher-nav">
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Docente</p>
-        <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">👨‍🏫 Panel Docente</button>
+        <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">➕ Crear Clase</button>
         <button type="button" onclick="showScreen('teacher-classes')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📚 Mis Clases / Reportes</button>
         <button type="button" onclick="showScreen('teacher-live-class')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📡 Clase en Vivo</button>
       </div>
@@ -225,7 +225,6 @@
           <span id="teacher-profile-badge" class="text-xs font-bold text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">Docente Autenticado</span>
           <h2 id="teacher-welcome-name" class="font-display font-bold text-xl text-slate-900 mt-1">Panel del Docente</h2>
         </div>
-        <button type="button" onclick="logout()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-full border border-slate-200">Cerrar Sesión</button>
       </div>
 
       <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
@@ -242,9 +241,6 @@
         </div>
         <button type="button" onclick="createAndStartClass()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
           Crear e Ir a la Clase
-        </button>
-        <button type="button" onclick="showScreen('teacher-classes')" class="w-full bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-300 shadow-sm">
-          📚 Mis Clases (ver / reanudar / reportes)
         </button>
       </div>
     </section>
@@ -668,13 +664,13 @@
       const sb = document.getElementById('sidebar');
       if (sb) sb.classList.toggle('hidden');
     }
-    // Sidebar por rol: docente solo ve Docente, alumno solo ve Alumno
+    // Sidebar por rol: sin sesión solo Inicio; docente solo Docente; alumno solo Alumno
     function refreshSidebarVisibility() {
       const teacherNav = document.getElementById('sidebar-teacher-nav');
       const studentNav = document.getElementById('sidebar-student-nav');
-      const role = teacherProfile ? teacherProfile.role : currentRole;
-      if (teacherNav) teacherNav.classList.toggle('hidden', !(role === 'teacher' || !role));
-      if (studentNav) studentNav.classList.toggle('hidden', !(role === 'student' || !role));
+      const role = teacherProfile ? teacherProfile.role : null;
+      if (teacherNav) teacherNav.classList.toggle('hidden', role !== 'teacher');
+      if (studentNav) studentNav.classList.toggle('hidden', role !== 'student');
     }
     applyTheme(document.documentElement.dataset.theme || 'dark');
 
@@ -809,9 +805,10 @@
         if (screenName === 'student-join') status.innerText = teacherProfile ? `Alumno · ${teacherProfile.name}` : 'Alumno';
         if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
-      // Botón Cerrar Sesión arriba al lado del nombre: visible solo si hay sesión (docente y alumno)
+      // Botón Cerrar Sesión: solo cuando hay sesión Y no estás en elegir rol / login / registro
       const logoutBtn = document.getElementById('btn-logout-header');
-      if (logoutBtn) logoutBtn.classList.toggle('hidden', !teacherProfile);
+      const logoutScreens = ['teacher-dashboard', 'teacher-classes', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
+      if (logoutBtn) logoutBtn.classList.toggle('hidden', !(teacherProfile && logoutScreens.includes(screenName)));
       if (screenName === 'teacher-dashboard') loadMyClasses();
       if (screenName === 'teacher-classes') loadMyClasses();
       refreshSidebarVisibility();
