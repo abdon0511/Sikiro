@@ -111,7 +111,33 @@
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Alumno</p>
         <button type="button" onclick="showScreen('student-join')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🎓 Ingresar a Clase</button>
       </div>
+      <!-- CONTACTO: cambiá los correos por los tuyos (buscá CONTACTO en el código) -->
+      <div id="sidebar-contact-nav" class="pt-4 space-y-2">
+        <p class="px-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Contáctanos</p>
+        <a href="mailto:contacto@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">✉️ contacto@sikiro.edu.pe</a>
+        <a href="mailto:soporte@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">🛠️ soporte@sikiro.edu.pe</a>
+        <a href="mailto:prensa@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">📧 prensa@sikiro.edu.pe</a>
+        <div class="px-2 pt-2 space-y-2">
+          <input type="text" id="contact-name" maxlength="50" placeholder="Tu nombre (máx. 50)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8]" />
+          <input type="email" id="contact-email" maxlength="80" placeholder="Tu correo (máx. 80)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8]" />
+          <textarea id="contact-message" maxlength="500" rows="3" placeholder="Mensaje (máx. 500)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8] resize-none"></textarea>
+          <div class="flex justify-between items-center">
+            <span id="contact-counter" class="text-[10px] text-slate-500">0/500</span>
+            <button type="button" onclick="sendContactMessage()" class="bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#0b1220] font-bold text-[11px] px-3 py-1.5 rounded-full transition">Enviar</button>
+          </div>
+        </div>
+      </div>
     </nav>
+    <!-- REDES: cambiá los href por las cuentas reales (buscá REDES en el código) -->
+    <div class="p-4 border-t border-[#26334d]">
+      <p class="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Síguenos</p>
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/abdon0511" target="_blank" rel="noopener" title="GitHub" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition hover:scale-110"><svg class="w-5 h-5 fill-slate-300" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+        <a href="https://instagram.com/" target="_blank" rel="noopener" title="Instagram" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition hover:scale-110"><svg class="w-5 h-5 fill-slate-300" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zm0 10.162a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+        <a href="https://x.com/" target="_blank" rel="noopener" title="X" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition hover:scale-110"><svg class="w-4 h-4 fill-slate-300" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="https://youtube.com/" target="_blank" rel="noopener" title="YouTube" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition hover:scale-110"><svg class="w-5 h-5 fill-slate-300" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+      </div>
+    </div>
   </aside>
 
   <div class="flex-1 flex flex-col min-w-0">
@@ -686,6 +712,32 @@
       if (studentNav) studentNav.classList.toggle('hidden', role !== 'student');
     }
     applyTheme(document.documentElement.dataset.theme || 'dark');
+
+    // Contacto: formulario con límites (nombre 50, correo 80, mensaje 500)
+    document.addEventListener('input', (e) => {
+      if (e.target && e.target.id === 'contact-message') {
+        const c = document.getElementById('contact-counter');
+        if (c) c.innerText = e.target.value.length + '/500';
+      }
+    });
+    async function sendContactMessage() {
+      const name = (document.getElementById('contact-name') || {}).value?.trim() || '';
+      const email = (document.getElementById('contact-email') || {}).value?.trim() || '';
+      const message = (document.getElementById('contact-message') || {}).value?.trim() || '';
+      if (!name || !email || !message) { showToast('Completá nombre, correo y mensaje'); return; }
+      if (name.length > 50 || email.length > 80 || message.length > 500) { showToast('Revisá los límites (50/80/500)'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Correo no válido'); return; }
+      if (!supabaseClient) { showToast('Sin conexión a Supabase'); return; }
+      const { error } = await supabaseClient.rpc('send_contact_message', { p_name: name, p_email: email, p_message: message });
+      if (error) { showToast('Error al enviar: ' + error.message); return; }
+      // Aviso por correo a los creadores (si la Edge Function está desplegada)
+      try { await supabaseClient.functions.invoke('send-contact-email', { body: { name, email, message } }); } catch (e) {}
+      document.getElementById('contact-name').value = '';
+      document.getElementById('contact-email').value = '';
+      document.getElementById('contact-message').value = '';
+      const c = document.getElementById('contact-counter'); if (c) c.innerText = '0/500';
+      showToast('✓ Mensaje enviado. ¡Gracias!');
+    }
 
     let lastReport = null;
     let statsPollInterval = null;
@@ -1392,6 +1444,7 @@
     window.logout = logout;
     window.toggleTheme = toggleTheme;
     window.toggleSidebar = toggleSidebar;
+    window.sendContactMessage = sendContactMessage;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
