@@ -879,6 +879,7 @@
       if (liveChannel) {
         try { await liveChannel.untrack(); } catch (e) {}
         if (supabaseClient) supabaseClient.removeChannel(liveChannel);
+      }
       liveChannel = null;
       clearActiveClass();
       currentClass.id = null;
