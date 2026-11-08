@@ -17,7 +17,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 
   <script>
+    // Tema inicial (evita parpadeo)
+    try { document.documentElement.dataset.theme = localStorage.getItem('sikiro_theme') || 'dark'; } catch(e) { document.documentElement.dataset.theme = 'dark'; }
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -229,6 +232,50 @@
       </div>
     </section>
 
+    <!-- PANTALLA 5b: REPORTE FINAL DEL DOCENTE -->
+    <section id="screen-teacher-report" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+      <div class="border-b border-slate-100 pb-4">
+        <span class="text-xs font-bold text-brand-blue bg-blue-50 px-3 py-1 rounded-full border border-blue-100">Reporte Final</span>
+        <h2 id="report-course-topic" class="font-display font-bold text-2xl text-slate-900 mt-2">Curso - Tema</h2>
+        <p id="report-meta" class="text-xs text-slate-500 mt-1">CÓDIGO: ---- · Duración: 00:00</p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-students" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos</span>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-comprehension" class="block font-display font-extrabold text-2xl text-brand-amber">100%</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Comprensión</span>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-pace" class="block font-display font-extrabold text-xl text-brand-green">Adecuado</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Ritmo</span>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-questions-count" class="block font-display font-extrabold text-2xl text-slate-800">0</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Preguntas</span>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="font-display font-bold text-sm text-slate-900">Comprensión</h3>
+        <div id="report-comp-bars" class="space-y-3"></div>
+        <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Ritmo</h3>
+        <div id="report-pace-bars" class="space-y-3"></div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas</h3>
+        <div id="report-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+      </div>
+
+      <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+        Volver al Panel
+      </button>
+    </section>
+
     <!-- PANTALLA 6: UNIRSE A CLASE CON CÓDIGO (ESTRICTO 4 DÍGITOS) -->
     <section id="screen-student-join" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md mx-auto text-center space-y-6">
       <div class="flex justify-between items-center">
@@ -256,6 +303,10 @@
           <h3 id="student-live-course-topic" class="font-display font-bold text-lg text-slate-900 mt-1">Curso y Tema</h3>
         </div>
         <button type="button" onclick="studentLeaveClass()" class="text-xs font-bold text-slate-400 hover:text-slate-600">Salir</button>
+      </div>
+
+      <div id="student-waiting-banner" class="hidden p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+        <p id="student-waiting-text" class="text-xs font-bold text-brand-amber">⏸ Clase en pausa. Esperá a que el profesor continúe.</p>
       </div>
 
       <div class="space-y-2">
@@ -482,12 +533,19 @@
     // El alumno reacciona al cambio de estado.
     function handleStudentClassStatus(status) {
       const badge = document.getElementById('student-live-status-badge');
+      const banner = document.getElementById('student-waiting-banner');
+      const bannerText = document.getElementById('student-waiting-text');
       if (status === 'active') {
         if (badge) badge.innerText = 'En Vivo · 100% Anónimo';
+        if (banner) banner.classList.add('hidden');
         showToast('▶ Clase iniciada');
-      } else if (status === 'paused') {
+      } else if (status === 'paused' || status === 'waiting') {
         if (badge) badge.innerText = 'En Pausa';
-        showToast('⏸ Clase en pausa');
+        if (bannerText) bannerText.innerText = status === 'waiting'
+          ? '⏳ En espera a que el profesor inicie la clase.'
+          : '⏸ Clase en pausa. Esperá a que el profesor continúe.';
+        if (banner) banner.classList.remove('hidden');
+        showToast(status === 'waiting' ? '⏳ En espera del profesor' : '⏸ Clase en pausa');
       } else if (status === 'finished') {
         if (badge) badge.innerText = 'Clase Finalizada';
         showToast('⏹ Clase finalizada por el profesor');
@@ -620,7 +678,7 @@
     }
 
     function showScreen(screenName) {
-      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-live-class', 'student-join', 'student-live-view'];
+      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
       screens.forEach(s => {
         const elem = document.getElementById(`screen-${s}`);
         if (elem) elem.classList.add('hidden');
@@ -636,6 +694,7 @@
         if (screenName === 'student-auth') status.innerText = 'Portal Alumno';
         if (screenName === 'teacher-dashboard') status.innerText = teacherProfile ? `Prof. ${teacherProfile.name}` : 'Panel Docente';
         if (screenName === 'teacher-live-class') status.innerText = `Clase en Vivo: ${currentClass.code}`;
+        if (screenName === 'teacher-report') status.innerText = 'Reporte Final';
         if (screenName === 'student-join') status.innerText = 'Alumno';
         if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
@@ -803,7 +862,11 @@
         return;
       }
       const { data: stats } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: currentClass.id });
-      // `stats` queda disponible para un futuro reporte final (todavía no se muestra).
+      // Guardar datos del reporte antes de limpiar la clase
+      const reportData = {
+        course: currentClass.course, topic: currentClass.topic, code: currentClass.code,
+        seconds: currentClass.secondsElapsed, stats: stats
+      };
       currentClass.isStarted = false;
       // Avisar a los alumnos ANTES de desconectar el canal
       broadcastClassStatus('finished');
@@ -815,10 +878,58 @@
 
       showToast('Clase finalizada. Informe guardado.');
 
-      // Aquí podrías mostrar una pantalla de resultados si tuvieras una.
-      // Por ahora, volvemos al inicio.
-      showScreen('teacher-dashboard');
+      showTeacherReport(reportData);
+      showScreen('teacher-report');
       currentClass.id = null;
+    }
+
+    // Reporte final con gráficas simples de barras
+    function barRow(label, count, total, colorClass) {
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return '<div><div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>' + escapeHtml(label) + '</span><span>' + count + ' (' + pct + '%)</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full ' + colorClass + '" style="width:' + pct + '%"></div></div></div>';
+    }
+    function showTeacherReport(report) {
+      const row = Array.isArray(report.stats) ? report.stats[0] : report.stats;
+      const s = row && typeof row === 'object' ? row : {};
+      const num = (v) => (typeof v === 'number' && Number.isFinite(v)) ? v : 0;
+      const sig = s.signals && typeof s.signals === 'object' ? s.signals : s;
+      const seguro = num(sig.seguro), parcial = num(sig.parcial), perdido = num(sig.perdido);
+      const lento = num(sig.lento), adecuado = num(sig.adecuado), rapido = num(sig.rapido);
+      const totalComp = seguro + parcial + perdido;
+      const score = totalComp > 0 ? Math.round(((seguro + parcial * 0.5) / totalComp) * 100) : 100;
+      let pace = 'Adecuado';
+      if (rapido > adecuado && rapido > lento) pace = 'Rápido ⚡';
+      else if (lento > adecuado && lento > rapido) pace = 'Lento 🐢';
+      const students = num(s.total_students) || num(s.students_count) || currentClass.studentsCount;
+      const qs = Array.isArray(s.questions) ? s.questions : (Array.isArray(currentClass.questions) ? currentClass.questions : []);
+      const texts = qs.map((q) => (typeof q === 'string' ? q : q.content || q.text || '')).filter(Boolean);
+
+      const mm = String(Math.floor(report.seconds / 60)).padStart(2, '0');
+      const ss = String(report.seconds % 60).padStart(2, '0');
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+      set('report-course-topic', (report.course && report.topic) ? report.course + ' - ' + report.topic : 'Clase finalizada');
+      set('report-meta', 'CÓDIGO: ' + report.code + ' · Duración: ' + mm + ':' + ss);
+      set('report-students', students);
+      set('report-comprehension', score + '%');
+      set('report-pace', pace);
+      set('report-questions-count', texts.length);
+
+      const compBars = document.getElementById('report-comp-bars');
+      if (compBars) compBars.innerHTML =
+        barRow('🟢 Entendido', seguro, totalComp, 'bg-green-500') +
+        barRow('🟡 A Medias', parcial, totalComp, 'bg-amber-500') +
+        barRow('🔴 Confundido', perdido, totalComp, 'bg-rose-500');
+      const totalPace = lento + adecuado + rapido;
+      const paceBars = document.getElementById('report-pace-bars');
+      if (paceBars) paceBars.innerHTML =
+        barRow('🐢 Lento', lento, totalPace, 'bg-slate-400') +
+        barRow('🙂 Adecuado', adecuado, totalPace, 'bg-blue-500') +
+        barRow('⚡ Rápido', rapido, totalPace, 'bg-rose-500');
+
+      const qBox = document.getElementById('report-questions');
+      if (qBox) qBox.innerHTML = texts.length === 0
+        ? '<p class="text-xs text-slate-400 italic">No hubo preguntas.</p>'
+        : texts.map((q) => '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 flex justify-between gap-2"><span>"' + escapeHtml(q) + '"</span><span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded h-fit">Anónimo</span></div>').join('');
     }
 
     // ==========================================
@@ -868,6 +979,17 @@
         : `Clase en Vivo (${code})`;
       const badge = document.getElementById('student-live-status-badge');
       if (badge) badge.innerText = 'En Vivo · 100% Anónimo';
+      const joinBanner = document.getElementById('student-waiting-banner');
+      const joinBannerText = document.getElementById('student-waiting-text');
+      const initialStatus = row.status || 'waiting';
+      if (initialStatus !== 'active' && joinBanner && joinBannerText) {
+        joinBannerText.innerText = initialStatus === 'paused'
+          ? '⏸ Clase en pausa. Esperá a que el profesor continúe.'
+          : '⏳ En espera a que el profesor inicie la clase.';
+        joinBanner.classList.remove('hidden');
+      } else if (joinBanner) {
+        joinBanner.classList.add('hidden');
+      }
       
       persistActiveClass();
       showToast('Te has unido a la clase');
