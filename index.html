@@ -311,7 +311,7 @@
 
       <div class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">🧠 ¿Cómo vas con la explicación?</h4>
-        <div class="grid grid-cols-3 gap-3">
+        <div id="group-comprension" class="grid grid-cols-3 gap-3">
           <button type="button" onclick="studentSendSignal('comprension', 'seguro')" class="p-3 bg-green-50 hover:bg-green-100 border border-green-200 text-brand-green font-bold text-xs rounded-2xl transition">🟢 Entendido</button>
           <button type="button" onclick="studentSendSignal('comprension', 'parcial')" class="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-brand-amber font-bold text-xs rounded-2xl transition">🟡 A Medias</button>
           <button type="button" onclick="studentSendSignal('comprension', 'perdido')" class="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-brand-rose font-bold text-xs rounded-2xl transition">🔴 Confundido</button>
@@ -320,7 +320,7 @@
 
       <div class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">⚡ Ritmo de la clase</h4>
-        <div class="grid grid-cols-3 gap-3">
+        <div id="group-ritmo" class="grid grid-cols-3 gap-3">
           <button type="button" onclick="studentSendSignal('ritmo', 'lento')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">🐢 Lento</button>
           <button type="button" onclick="studentSendSignal('ritmo', 'adecuado')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">🙂 Adecuado</button>
           <button type="button" onclick="studentSendSignal('ritmo', 'rapido')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">⚡ Rápido</button>
@@ -331,7 +331,7 @@
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Enviar Pregunta Anónima al Profesor</h4>
         <div class="flex gap-2">
           <input type="text" id="student-anonymous-question-input" maxlength="200" placeholder="Escribe tu duda sin revelar tu identidad... (máx. 200)" class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
-          <button type="button" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition">Enviar</button>
+          <button type="button" id="btn-send-question" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">Enviar</button>
         </div>
       </div>
     </section>
@@ -353,6 +353,7 @@
     let liveChannel = null;
     let toastTimer = null;
     let prevPresenceCount = 0; // para avisar solo cuando cambia el conteo
+    let lastQuestionAt = 0; // cooldown anti-spam en el front (15s)
 
     let currentClass = {
       id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
@@ -883,26 +884,33 @@
       currentClass.id = null;
     }
 
-    // Reporte final con gráficas simples de barras
-    function barRow(label, count, total, colorClass) {
+    // Reporte final con gráficas simples de barras (colores inline: Tailwind CDN no siempre genera clases nuevas)
+    function barRow(label, count, total, hex) {
       const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-      return '<div><div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>' + escapeHtml(label) + '</span><span>' + count + ' (' + pct + '%)</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full ' + colorClass + '" style="width:' + pct + '%"></div></div></div>';
+      return '<div><div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>' + escapeHtml(label) + '</span><span>' + count + ' (' + pct + '%)</span></div><div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:' + pct + '%;background:' + hex + '"></div></div></div>';
     }
     function showTeacherReport(report) {
       const row = Array.isArray(report.stats) ? report.stats[0] : report.stats;
       const s = row && typeof row === 'object' ? row : {};
       const num = (v) => (typeof v === 'number' && Number.isFinite(v)) ? v : 0;
       const sig = s.signals && typeof s.signals === 'object' ? s.signals : s;
-      const seguro = num(sig.seguro), parcial = num(sig.parcial), perdido = num(sig.perdido);
-      const lento = num(sig.lento), adecuado = num(sig.adecuado), rapido = num(sig.rapido);
+      // Si la DB viene en 0 (ej. timing), usar los conteos en vivo del docente como respaldo
+      let seguro = num(sig.seguro) || currentClass.signals.seguro;
+      let parcial = num(sig.parcial) || currentClass.signals.parcial;
+      let perdido = num(sig.perdido) || currentClass.signals.perdido;
+      let lento = num(sig.lento) || currentClass.signals.lento;
+      let adecuado = num(sig.adecuado) || currentClass.signals.adecuado;
+      let rapido = num(sig.rapido) || currentClass.signals.rapido;
       const totalComp = seguro + parcial + perdido;
       const score = totalComp > 0 ? Math.round(((seguro + parcial * 0.5) / totalComp) * 100) : 100;
       let pace = 'Adecuado';
       if (rapido > adecuado && rapido > lento) pace = 'Rápido ⚡';
       else if (lento > adecuado && lento > rapido) pace = 'Lento 🐢';
       const students = num(s.total_students) || num(s.students_count) || currentClass.studentsCount;
-      const qs = Array.isArray(s.questions) ? s.questions : (Array.isArray(currentClass.questions) ? currentClass.questions : []);
-      const texts = qs.map((q) => (typeof q === 'string' ? q : q.content || q.text || '')).filter(Boolean);
+      const dbQs = Array.isArray(s.questions) ? s.questions : [];
+      const localQs = Array.isArray(currentClass.questions) ? currentClass.questions : [];
+      const merged = [...new Set([...dbQs, ...localQs])];
+      const texts = merged.map((q) => (typeof q === 'string' ? q : q.content || q.text || '')).filter(Boolean);
 
       const mm = String(Math.floor(report.seconds / 60)).padStart(2, '0');
       const ss = String(report.seconds % 60).padStart(2, '0');
@@ -916,15 +924,15 @@
 
       const compBars = document.getElementById('report-comp-bars');
       if (compBars) compBars.innerHTML =
-        barRow('🟢 Entendido', seguro, totalComp, 'bg-green-500') +
-        barRow('🟡 A Medias', parcial, totalComp, 'bg-amber-500') +
-        barRow('🔴 Confundido', perdido, totalComp, 'bg-rose-500');
+        barRow('🟢 Entendido', seguro, totalComp, '#22c55e') +
+        barRow('🟡 A Medias', parcial, totalComp, '#f59e0b') +
+        barRow('🔴 Confundido', perdido, totalComp, '#ef4444');
       const totalPace = lento + adecuado + rapido;
       const paceBars = document.getElementById('report-pace-bars');
       if (paceBars) paceBars.innerHTML =
-        barRow('🐢 Lento', lento, totalPace, 'bg-slate-400') +
-        barRow('🙂 Adecuado', adecuado, totalPace, 'bg-blue-500') +
-        barRow('⚡ Rápido', rapido, totalPace, 'bg-rose-500');
+        barRow('🐢 Lento', lento, totalPace, '#94a3b8') +
+        barRow('🙂 Adecuado', adecuado, totalPace, '#3b82f6') +
+        barRow('⚡ Rápido', rapido, totalPace, '#ef4444');
 
       const qBox = document.getElementById('report-questions');
       if (qBox) qBox.innerHTML = texts.length === 0
@@ -994,6 +1002,7 @@
       persistActiveClass();
       showToast('Te has unido a la clase');
       showScreen('student-live-view');
+      refreshSignalCooldowns();
     }
 
     // El alumno deja la sala: sale de Presencia y desconecta el canal.
@@ -1012,11 +1021,39 @@
       showToast('Saliste de la clase');
     }
 
+    // 1 voto por alumno cada 20 minutos, por tipo (comprensión / ritmo)
+    const SIGNAL_COOLDOWN_MS = 20 * 60 * 1000;
+    function signalStorageKey(kind) { return 'sikiro_last_signal_' + (currentClass.id || 'x') + '_' + kind; }
+    function setSignalGroupDisabled(kind, disabled) {
+      const group = document.getElementById(kind === 'comprension' ? 'group-comprension' : 'group-ritmo');
+      if (!group) return;
+      group.querySelectorAll('button').forEach((b) => {
+        b.disabled = disabled;
+        b.classList.toggle('opacity-50', disabled);
+        b.classList.toggle('cursor-not-allowed', disabled);
+      });
+    }
+    function refreshSignalCooldowns() {
+      ['comprension', 'ritmo'].forEach((kind) => {
+        const ts = Number(localStorage.getItem(signalStorageKey(kind)) || 0);
+        setSignalGroupDisabled(kind, Date.now() - ts < SIGNAL_COOLDOWN_MS);
+      });
+    }
+
     async function studentSendSignal(kind, val) {
       if (!currentClass.id || !supabaseClient) {
         showToast('No estás en una clase.');
         return;
       }
+      // Bloqueo en el front: ya votó en esta ventana de 20 min
+      const last = Number(localStorage.getItem(signalStorageKey(kind)) || 0);
+      if (Date.now() - last < SIGNAL_COOLDOWN_MS) {
+        const mins = Math.ceil((SIGNAL_COOLDOWN_MS - (Date.now() - last)) / 60000);
+        showToast('Ya votaste. Próximo voto en ~' + mins + ' min');
+        setSignalGroupDisabled(kind, true);
+        return;
+      }
+      setSignalGroupDisabled(kind, true); // evitar doble clic mientras se envía
 
       // Guardamos la señal en Supabase
       // FIX #2: Solo hacemos broadcast si la BD aceptó la señal.
@@ -1027,8 +1064,10 @@
       });
       if (error) {
         showToast('Error al registrar: ' + error.message);
+        refreshSignalCooldowns();
         return;
       }
+      localStorage.setItem(signalStorageKey(kind), String(Date.now()));
 
       // También la enviamos en vivo para que el profesor la vea al instante
       if (liveChannel) {
@@ -1063,6 +1102,14 @@
         showToast('Tu pregunta contiene palabras no permitidas');
         return;
       }
+      // Anti-spam en el front: 1 pregunta cada 15 segundos
+      const elapsed = Date.now() - lastQuestionAt;
+      if (elapsed < 15000) {
+        showToast('Esperá ' + Math.ceil((15000 - elapsed) / 1000) + 's antes de otra pregunta');
+        return;
+      }
+      const sendBtn = document.getElementById('btn-send-question');
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.innerText = 'Esperá…'; }
 
       // Guardamos la pregunta ANÓNIMA en Supabase (sin participant_id)
       // FIX #2: Solo hacemos broadcast si la BD aceptó la pregunta.
@@ -1072,6 +1119,7 @@
       });
       if (error) {
         showToast('Error al enviar: ' + error.message);
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.innerText = 'Enviar'; }
         return;
       }
 
@@ -1080,8 +1128,10 @@
         liveChannel.send({ type: 'broadcast', event: 'ANONYMOUS_QUESTION', payload: { text } });
       }
 
+      lastQuestionAt = Date.now();
       if (input) input.value = '';
       showToast('Pregunta anónima enviada');
+      setTimeout(() => { if (sendBtn) { sendBtn.disabled = false; sendBtn.innerText = 'Enviar'; } }, 15000);
     }
 
     function updateTeacherLiveStats() {
