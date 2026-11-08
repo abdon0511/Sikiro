@@ -301,6 +301,7 @@
     let teacherProfile = null;
     let liveChannel = null;
     let toastTimer = null;
+    let prevPresenceCount = 0; // para avisar solo cuando cambia el conteo
 
     let currentClass = {
       id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
@@ -418,19 +419,17 @@
       });
 
       liveChannel
-        .on('broadcast', { event: 'STUDENT_JOIN' }, (payload) => {
-          if (currentRole === 'teacher') {
-            currentClass.studentsCount++;
-            updateTeacherLiveStats();
-            showToast('🎓 Un alumno se ha conectado.');
-          }
-        })
-        .on('broadcast', { event: 'STUDENT_LEAVE' }, () => {
-          if (currentRole === 'teacher') {
-            currentClass.studentsCount = Math.max(0, currentClass.studentsCount - 1);
-            updateTeacherLiveStats();
-            showToast('🎓 Un alumno se ha ido.');
-          }
+        // REMPLAZO por Presencia: ya no contamos con STUDENT_JOIN/LEAVE manuales.
+        // Supabase detecta solo quién sigue conectado (cierre, recarga, sin internet).
+        .on('presence', { event: 'sync' }, () => {
+          if (currentRole !== 'teacher' || !liveChannel) return;
+          const state = liveChannel.presenceState();
+          const count = Object.values(state).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+          if (count > prevPresenceCount) showToast('🎓 Un alumno se ha conectado.');
+          else if (count < prevPresenceCount) showToast('🎓 Un alumno se ha ido.');
+          prevPresenceCount = count;
+          currentClass.studentsCount = count;
+          updateTeacherLiveStats();
         })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
           if (currentRole === 'teacher' && payload.payload) {
@@ -458,7 +457,12 @@
           if (status === 'SUBSCRIBED') {
             // FIX #3: Al (re)conectar, rescatar contadores desde la BD
             if (currentRole === 'teacher') hydrateFromStats();
-            if (currentRole === 'student') registerLeaveOnUnload();
+            // Solo los alumnos se registran en Presencia (el docente solo cuenta)
+            if (currentRole === 'student') {
+              registerLeaveOnUnload(); // ya no se usa para contar, queda como respaldo silencioso
+              const pid = teacherProfile?.email || ('anon-' + Math.random().toString(36).slice(2));
+              liveChannel.track({ user_id: pid, online_at: new Date().toISOString() }).catch(() => {});
+            }
             if (typeof onSubscribedCallback === 'function') {
               onSubscribedCallback();
             }
@@ -717,6 +721,7 @@
       currentClass.isStarted = false;
       currentClass.secondsElapsed = 0;
       currentClass.studentsCount = 0;
+      prevPresenceCount = 0;
       currentClass.questions = [];
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
       const topicElem = document.getElementById('display-course-topic');
@@ -855,11 +860,7 @@
       currentClass.course = row.course || row.class_course || row.p_course || '';
       currentClass.topic = row.topic || row.class_topic || row.p_topic || '';
       
-      connectToLiveRoom(code, () => {
-        if (liveChannel) {
-          liveChannel.send({ type: 'broadcast', event: 'STUDENT_JOIN', payload: { code: code } });
-        }
-      });
+      connectToLiveRoom(code);
 
       const liveTopicElem = document.getElementById('student-live-course-topic');
       if (liveTopicElem) liveTopicElem.innerText = (currentClass.course && currentClass.topic)
@@ -873,13 +874,11 @@
       showScreen('student-live-view');
     }
 
-    // El alumno deja la sala: avisa al docente y desconecta el canal.
-    function studentLeaveClass() {
-      // Avisar al docente ANTES de desconectar el canal
-      if (liveChannel && currentClass.id) {
-        try { liveChannel.send({ type: 'broadcast', event: 'STUDENT_LEAVE', payload: { code: currentClass.code } }); } catch (e) {}
-      }
-      if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
+    // El alumno deja la sala: sale de Presencia y desconecta el canal.
+    async function studentLeaveClass() {
+      if (liveChannel) {
+        try { await liveChannel.untrack(); } catch (e) {}
+        if (supabaseClient) supabaseClient.removeChannel(liveChannel);
       liveChannel = null;
       clearActiveClass();
       currentClass.id = null;
