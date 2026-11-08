@@ -252,7 +252,7 @@
     <section id="screen-student-live-view" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-lg mx-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-4">
         <div>
-          <span class="text-[10px] font-bold text-brand-green bg-green-50 px-2.5 py-1 rounded-full border border-green-100 uppercase">En Vivo · 100% Anónimo</span>
+          <span id="student-live-status-badge" class="text-[10px] font-bold text-brand-green bg-green-50 px-2.5 py-1 rounded-full border border-green-100 uppercase">En Vivo · 100% Anónimo</span>
           <h3 id="student-live-course-topic" class="font-display font-bold text-lg text-slate-900 mt-1">Curso y Tema</h3>
         </div>
         <button type="button" onclick="studentLeaveClass()" class="text-xs font-bold text-slate-400 hover:text-slate-600">Salir</button>
@@ -441,6 +441,12 @@
             showToast('❓ Nueva pregunta anónima recibida');
           }
         })
+        .on('broadcast', { event: 'CLASS_STATUS' }, (payload) => {
+          // El alumno se entera en vivo cuando el docente inicia/pausa/finaliza
+          if (currentRole === 'student' && payload.payload) {
+            handleStudentClassStatus(payload.payload.status);
+          }
+        })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             // FIX #3: Al (re)conectar, rescatar contadores desde la BD
@@ -450,6 +456,32 @@
             }
           }
         });
+    }
+
+    // ==========================================
+    // 3b. SINCRONIZACIÓN DOCENTE -> ALUMNO
+    // ==========================================
+    // El docente avisa en vivo el cambio de estado de la clase.
+    function broadcastClassStatus(status) {
+      if (!liveChannel) return;
+      liveChannel.send({ type: 'broadcast', event: 'CLASS_STATUS', payload: { status } });
+    }
+
+    // El alumno reacciona al cambio de estado.
+    function handleStudentClassStatus(status) {
+      const badge = document.getElementById('student-live-status-badge');
+      if (status === 'active') {
+        if (badge) badge.innerText = 'En Vivo · 100% Anónimo';
+        showToast('▶ Clase iniciada');
+      } else if (status === 'paused') {
+        if (badge) badge.innerText = 'En Pausa';
+        showToast('⏸ Clase en pausa');
+      } else if (status === 'finished') {
+        if (badge) badge.innerText = 'Clase Finalizada';
+        showToast('⏹ Clase finalizada por el profesor');
+        // Dar tiempo a leer el cartel antes de sacar al alumno
+        setTimeout(() => studentLeaveClass(), 2500);
+      }
     }
 
     // ==========================================
@@ -701,6 +733,8 @@
       }
       currentClass.isStarted = newStatus;
       persistActiveClass();
+      // Avisar a todos los alumnos en vivo
+      broadcastClassStatus(newStatus ? 'active' : 'paused');
 
       if (newStatus) {
         currentClass.isStarted = true;
@@ -745,7 +779,11 @@
       const { data: stats } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: currentClass.id });
       // `stats` queda disponible para un futuro reporte final (todavía no se muestra).
       currentClass.isStarted = false;
+      // Avisar a los alumnos ANTES de desconectar el canal
+      broadcastClassStatus('finished');
       if (currentClass.timerInterval) clearInterval(currentClass.timerInterval);
+      // Pequeña espera para que el Broadcast salga antes de cerrar el canal
+      await new Promise((resolve) => setTimeout(resolve, 500));
       if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
       clearActiveClass();
 
@@ -806,6 +844,8 @@
       if (liveTopicElem) liveTopicElem.innerText = (currentClass.course && currentClass.topic)
         ? `${currentClass.course} - ${currentClass.topic}`
         : `Clase en Vivo (${code})`;
+      const badge = document.getElementById('student-live-status-badge');
+      if (badge) badge.innerText = 'En Vivo · 100% Anónimo';
       
       persistActiveClass();
       showToast('Te has unido a la clase');
