@@ -337,17 +337,19 @@
           .maybeSingle();
 
         // Si el perfil no existe (primer inicio de sesión), lo creamos
+        // Si ya existe pero el usuario eligió "Soy Docente" esta vez, lo actualizamos.
+        // Esto corrige el bug: entrar como docente te mandaba a alumno.
+        const intendedRole = localStorage.getItem('sikiro_intended_role');
         if (!profile) {
-          // Si el usuario venía de hacer clic en "Soy Docente", el localStorage lo recordará
-          const intendedRole = localStorage.getItem('sikiro_intended_role') || 'student';
-          
           const { data: newProfile } = await supabaseClient.from('profiles').insert({
             id: session.user.id,
-            role: intendedRole
+            role: intendedRole || 'student'
           }).select().single();
-          
+
           profile = newProfile;
-          localStorage.removeItem('sikiro_intended_role');
+        } else if (intendedRole === 'teacher' && profile.role !== 'teacher') {
+          await supabaseClient.from('profiles').update({ role: 'teacher' }).eq('id', session.user.id);
+          profile = { ...profile, role: 'teacher' };
         }
 
         teacherProfile = {
