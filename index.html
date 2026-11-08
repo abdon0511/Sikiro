@@ -425,6 +425,13 @@
             showToast('🎓 Un alumno se ha conectado.');
           }
         })
+        .on('broadcast', { event: 'STUDENT_LEAVE' }, () => {
+          if (currentRole === 'teacher') {
+            currentClass.studentsCount = Math.max(0, currentClass.studentsCount - 1);
+            updateTeacherLiveStats();
+            showToast('🎓 Un alumno se ha ido.');
+          }
+        })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
           if (currentRole === 'teacher' && payload.payload) {
             const { kind, val } = payload.payload;
@@ -451,6 +458,7 @@
           if (status === 'SUBSCRIBED') {
             // FIX #3: Al (re)conectar, rescatar contadores desde la BD
             if (currentRole === 'teacher') hydrateFromStats();
+            if (currentRole === 'student') registerLeaveOnUnload();
             if (typeof onSubscribedCallback === 'function') {
               onSubscribedCallback();
             }
@@ -482,6 +490,19 @@
         // Dar tiempo a leer el cartel antes de sacar al alumno
         setTimeout(() => studentLeaveClass(), 2500);
       }
+    }
+
+    // Intento de avisar al docente si el alumno cierra/recarga la pestaña.
+    // (Best-effort: algunos navegadores cortan el envío al cerrar.)
+    let leaveUnloadRegistered = false;
+    function registerLeaveOnUnload() {
+      if (leaveUnloadRegistered) return;
+      leaveUnloadRegistered = true;
+      window.addEventListener('beforeunload', () => {
+        if (currentRole === 'student' && liveChannel && currentClass.id) {
+          try { liveChannel.send({ type: 'broadcast', event: 'STUDENT_LEAVE', payload: { code: currentClass.code } }); } catch (e) {}
+        }
+      });
     }
 
     // ==========================================
@@ -852,8 +873,12 @@
       showScreen('student-live-view');
     }
 
-    // El alumno deja la sala: desconecta el canal y limpia la clase activa.
+    // El alumno deja la sala: avisa al docente y desconecta el canal.
     function studentLeaveClass() {
+      // Avisar al docente ANTES de desconectar el canal
+      if (liveChannel && currentClass.id) {
+        try { liveChannel.send({ type: 'broadcast', event: 'STUDENT_LEAVE', payload: { code: currentClass.code } }); } catch (e) {}
+      }
       if (liveChannel && supabaseClient) supabaseClient.removeChannel(liveChannel);
       liveChannel = null;
       clearActiveClass();
