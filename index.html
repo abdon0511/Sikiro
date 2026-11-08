@@ -98,18 +98,18 @@
       <p class="text-[10px] text-slate-500 mt-1">Retroalimentación en tiempo real</p>
     </div>
     <nav class="flex-1 p-3 space-y-1 text-xs font-semibold overflow-y-auto">
-      <p class="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">General</p>
-      <button type="button" onclick="showScreen('role-selector')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🏠 Inicio</button>
+      <div id="sidebar-general-nav">
+        <p class="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">General</p>
+        <button type="button" onclick="showScreen('role-selector')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🏠 Inicio</button>
+      </div>
       <div id="sidebar-teacher-nav">
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Docente</p>
         <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">➕ Crear Clase</button>
         <button type="button" onclick="showScreen('teacher-classes')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📚 Mis Clases / Reportes</button>
-        <button type="button" onclick="showScreen('teacher-live-class')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📡 Clase en Vivo</button>
       </div>
       <div id="sidebar-student-nav">
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Alumno</p>
         <button type="button" onclick="showScreen('student-join')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🎓 Ingresar a Clase</button>
-        <button type="button" onclick="showScreen('student-live-view')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🟢 En Vivo</button>
       </div>
     </nav>
   </aside>
@@ -671,6 +671,7 @@
     // Sidebar: solo después de iniciar sesión. Sin cuenta, solo se ve la elección de rol.
     function refreshSidebarVisibility() {
       const sb = document.getElementById('sidebar');
+      const generalNav = document.getElementById('sidebar-general-nav');
       const teacherNav = document.getElementById('sidebar-teacher-nav');
       const studentNav = document.getElementById('sidebar-student-nav');
       const role = teacherProfile ? teacherProfile.role : null;
@@ -679,6 +680,8 @@
         sb.classList.toggle('hidden', !role);
         sb.classList.toggle('flex', !!role);
       }
+      // Al loguearse se quita General (Inicio): solo queda su rol
+      if (generalNav) generalNav.classList.toggle('hidden', !!role);
       if (teacherNav) teacherNav.classList.toggle('hidden', role !== 'teacher');
       if (studentNav) studentNav.classList.toggle('hidden', role !== 'student');
     }
