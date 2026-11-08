@@ -279,7 +279,7 @@
       <div class="space-y-2 pt-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Enviar Pregunta Anónima al Profesor</h4>
         <div class="flex gap-2">
-          <input type="text" id="student-anonymous-question-input" placeholder="Escribe tu duda sin revelar tu identidad..." class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
+          <input type="text" id="student-anonymous-question-input" maxlength="200" placeholder="Escribe tu duda sin revelar tu identidad... (máx. 200)" class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
           <button type="button" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition">Enviar</button>
         </div>
       </div>
@@ -914,11 +914,30 @@
       showToast('✓ Respuesta registrada');
     }
 
+    // Listado simple de palabras prohibidas (minúsculas, sin acentos especiales)
+    const PROHIBITED_WORDS = ['mierda','puta','puto','carajo','pendejo','boludo','cabrón','cabron','chingada','chingado','verga','marica','idiota','estúpido','estupido','imbécil','imbecil'];
+    function containsProhibitedWord(text) {
+      const lower = ' ' + String(text || '').toLowerCase() + ' ';
+      return PROHIBITED_WORDS.some((w) => lower.includes(w));
+    }
+
     async function studentSendAnonymousQuestion() {
       const input = document.getElementById('student-anonymous-question-input');
       const text = input ? input.value.trim() : '';
       if (!text || !currentClass.id || !supabaseClient) {
         showToast('Escribe una pregunta');
+        return;
+      }
+      if (text.length > 200) {
+        showToast('Máximo 200 caracteres');
+        return;
+      }
+      if (/https?:\/\/|www\./i.test(text)) {
+        showToast('No se permiten enlaces');
+        return;
+      }
+      if (containsProhibitedWord(text)) {
+        showToast('Tu pregunta contiene palabras no permitidas');
         return;
       }
 
