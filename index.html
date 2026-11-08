@@ -1,4 +1,4 @@
-"<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -210,13 +210,20 @@
         <button type="button" onclick="createAndStartClass()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
           Crear e Ir a la Clase
         </button>
+        <button type="button" onclick="showScreen('teacher-classes')" class="w-full bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-300 shadow-sm">
+          📚 Mis Clases (ver / reanudar / reportes)
+        </button>
       </div>
+    </section>
 
-      <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-        <h3 class="font-display font-bold text-sm text-slate-800">Mis Clases Recientes</h3>
-        <div id="teacher-classes-list" class="space-y-2">
-          <p class="text-xs text-slate-400 italic">Cargando…</p>
-        </div>
+    <!-- PANTALLA 4b: MIS CLASES (interfaz separada) -->
+    <section id="screen-teacher-classes" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-lg mx-auto">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+        <h2 class="font-display font-bold text-xl text-slate-900">Mis Clases</h2>
+        <button type="button" onclick="showScreen('teacher-dashboard')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Volver</button>
+      </div>
+      <div id="teacher-classes-list" class="space-y-3">
+        <p class="text-xs text-slate-400 italic">Cargando…</p>
       </div>
     </section>
 
@@ -735,7 +742,7 @@
     }
 
     function showScreen(screenName) {
-      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
+      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-classes', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
       screens.forEach(s => {
         const elem = document.getElementById(`screen-${s}`);
         if (elem) elem.classList.add('hidden');
@@ -756,6 +763,7 @@
         if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
       if (screenName === 'teacher-dashboard') loadMyClasses();
+      if (screenName === 'teacher-classes') loadMyClasses();
     }
 
        function selectRole(role) {
@@ -953,21 +961,22 @@
       const s = row && typeof row === 'object' ? row : {};
       const num = (v) => (typeof v === 'number' && Number.isFinite(v)) ? v : 0;
       const sig = s.signals && typeof s.signals === 'object' ? s.signals : s;
-      // Si la DB viene en 0 (ej. timing), usar los conteos en vivo del docente como respaldo
-      let seguro = num(sig.seguro) || currentClass.signals.seguro;
-      let parcial = num(sig.parcial) || currentClass.signals.parcial;
-      let perdido = num(sig.perdido) || currentClass.signals.perdido;
-      let lento = num(sig.lento) || currentClass.signals.lento;
-      let adecuado = num(sig.adecuado) || currentClass.signals.adecuado;
-      let rapido = num(sig.rapido) || currentClass.signals.rapido;
+      // Si la DB viene en 0 (ej. timing), usar los conteos en vivo del docente como respaldo (solo si es la misma clase)
+      const local = report._keepLocal === false ? { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 } : currentClass.signals;
+      let seguro = num(sig.seguro) || local.seguro;
+      let parcial = num(sig.parcial) || local.parcial;
+      let perdido = num(sig.perdido) || local.perdido;
+      let lento = num(sig.lento) || local.lento;
+      let adecuado = num(sig.adecuado) || local.adecuado;
+      let rapido = num(sig.rapido) || local.rapido;
       const totalComp = seguro + parcial + perdido;
       const score = totalComp > 0 ? Math.round(((seguro + parcial * 0.5) / totalComp) * 100) : 100;
       let pace = 'Adecuado';
       if (rapido > adecuado && rapido > lento) pace = 'Rápido ⚡';
       else if (lento > adecuado && lento > rapido) pace = 'Lento 🐢';
-      const students = num(s.total_students) || num(s.students_count) || currentClass.studentsCount;
+      const students = num(s.total_students) || num(s.students_count) || (report._keepLocal === false ? 0 : currentClass.studentsCount);
       const dbQs = Array.isArray(s.questions) ? s.questions : [];
-      const localQs = Array.isArray(currentClass.questions) ? currentClass.questions : [];
+      const localQs = report._keepLocal === false ? [] : (Array.isArray(currentClass.questions) ? currentClass.questions : []);
       const merged = [...new Set([...dbQs, ...localQs])];
       const texts = merged.map((q) => (typeof q === 'string' ? q : q.content || q.text || '')).filter(Boolean);
 
@@ -1012,8 +1021,25 @@
       if (!rows.length) { box.innerHTML = '<p class="text-xs text-slate-400 italic">Todavía no creaste clases.</p>'; return; }
       box.innerHTML = rows.map((r) => {
         const done = r.status === 'finished';
-        return '<div class="flex items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-xl"><div class="min-w-0"><p class="text-xs font-bold text-slate-800 truncate">' + escapeHtml(r.course) + ' - ' + escapeHtml(r.topic) + '</p><p class="text-[10px] text-slate-400 font-mono">' + escapeHtml(r.code) + ' · ' + escapeHtml(r.status) + '</p></div>' + (done ? '<span class="text-[10px] font-bold text-slate-400 uppercase">Finalizada</span>' : '<button type="button" onclick="resumeClass(\'' + r.class_id + '\',\'' + escapeHtml(r.code) + '\',\'' + escapeHtml(r.course).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.topic).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.status) + '\')" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Reanudar</button>') + '</div>';
+        const args = '\'' + r.class_id + '\',\'' + escapeHtml(r.code) + '\',\'' + escapeHtml(r.course).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.topic).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.status) + '\',\'' + (r.created_at || '') + '\',\'' + (r.finished_at || '') + '\'';
+        const btn = done
+          ? '<button type="button" onclick="viewReportClass(' + args + ')" class="shrink-0 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Ver Reporte</button>'
+          : '<button type="button" onclick="resumeClass(' + args + ')" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Reanudar</button>';
+        return '<div class="flex items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-xl"><div class="min-w-0"><p class="text-xs font-bold text-slate-800 truncate">' + escapeHtml(r.course) + ' - ' + escapeHtml(r.topic) + '</p><p class="text-[10px] text-slate-400 font-mono">' + escapeHtml(r.code) + ' · ' + escapeHtml(r.status) + '</p></div>' + btn + '</div>';
       }).join('');
+    }
+    // Ver/descargar el reporte de una clase YA finalizada, sin reabrirla
+    async function viewReportClass(id, code, course, topic, status, createdAt, finishedAt) {
+      showToast('Cargando reporte...');
+      const { data, error } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: id });
+      if (error) { showToast('Error: ' + error.message); return; }
+      // Duración real desde created_at -> finished_at (el timer local se pierde al recargar)
+      let seconds = 0;
+      if (createdAt && finishedAt) seconds = Math.max(0, Math.round((new Date(finishedAt) - new Date(createdAt)) / 1000));
+      // Usar los conteos locales solo si coinciden con esta clase
+      const keepLocal = currentClass.id === id;
+      showTeacherReport({ course, topic, code, seconds, stats: data, _keepLocal: keepLocal });
+      showScreen('teacher-report');
     }
     function resumeClass(id, code, course, topic, status) {
       currentClass.id = id; currentClass.code = code; currentClass.course = course; currentClass.topic = topic;
@@ -1306,6 +1332,7 @@
     window.toggleTheme = toggleTheme;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
+    window.viewReportClass = viewReportClass;
     </script>
 </body>
 </html>
