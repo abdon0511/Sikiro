@@ -2,7 +2,7 @@
 // Desplegar: supabase functions deploy send-contact-email
 // Secrets necesarios (Supabase Dashboard > Edge Functions > Secrets):
 //   RESEND_API_KEY = re_... (de resend.com)
-//   CONTACT_TO_EMAIL = tu correo (ej: tu@gmail.com)
+//   CONTACT_TO_EMAIL = correos separados por coma (ej: a@gmail.com,b@gmail.com,c@gmail.com)
 //   CONTACT_FROM_EMAIL = onboarding@resend.dev (pruebas) o tu dominio verificado
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -19,6 +19,7 @@ serve(async (req) => {
     if (!name || !email || !message) throw new Error("Faltan datos");
     if (String(message).length > 500) throw new Error("Mensaje muy largo");
 
+    const toEmails = (Deno.env.get("CONTACT_TO_EMAIL") || "").split(",").map((e) => e.trim()).filter(Boolean);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -27,7 +28,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: Deno.env.get("CONTACT_FROM_EMAIL") || "Sikiro <onboarding@resend.dev>",
-        to: [Deno.env.get("CONTACT_TO_EMAIL") || ""],
+        to: toEmails,
         reply_to: email,
         subject: `Nuevo contacto Sikiro: ${name}`,
         text: `Nombre: ${name}\nCorreo: ${email}\n\n${message}`,
