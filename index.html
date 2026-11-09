@@ -731,7 +731,7 @@
       const { error } = await supabaseClient.rpc('send_contact_message', { p_name: name, p_email: email, p_message: message });
       if (error) { showToast('Error al enviar: ' + error.message); return; }
       // Aviso por correo a los creadores (si la Edge Function está desplegada)
-      try { await supabaseClient.functions.invoke('send-contact-email', { body: { name, email, message } }); } catch (e) {}
+      try { await supabaseClient.functions.invoke('resend-email'), { body: { name, email, message } }); } catch (e) {}
       document.getElementById('contact-name').value = '';
       document.getElementById('contact-email').value = '';
       document.getElementById('contact-message').value = '';
