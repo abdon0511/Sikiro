@@ -114,18 +114,8 @@
       <!-- CONTACTO: cambiá los correos por los tuyos (buscá CONTACTO en el código) -->
       <div id="sidebar-contact-nav" class="pt-4 space-y-2">
         <p class="px-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Contáctanos</p>
-        <a href="mailto:contacto@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">✉️ aldairrojasvelasquez377@gmail.com</a>
-        <a href="mailto:soporte@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">🛠️ soporte@sikiro.edu.pe</a>
-        <a href="mailto:prensa@sikiro.edu.pe" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">📧 prensa@sikiro.edu.pe</a>
-        <div class="px-2 pt-2 space-y-2">
-          <input type="text" id="contact-name" maxlength="50" placeholder="Tu nombre (máx. 50)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8]" />
-          <input type="email" id="contact-email" maxlength="80" placeholder="Tu correo (máx. 80)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8]" />
-          <textarea id="contact-message" maxlength="500" rows="3" placeholder="Mensaje (máx. 500)" class="w-full px-3 py-2 text-[11px] rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#38bdf8] resize-none"></textarea>
-          <div class="flex justify-between items-center">
-            <span id="contact-counter" class="text-[10px] text-slate-500">0/500</span>
-            <button type="button" onclick="sendContactMessage()" class="bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#0b1220] font-bold text-[11px] px-3 py-1.5 rounded-full transition">Enviar</button>
-          </div>
-        </div>
+        <a href="mailto:aldairrojasvelasquez377@gmail.com" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">✉️ aldairrojasvelasquez377@gmail.com</a>
+        <button type="button" onclick="showScreen('contact')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">📝 Enviar mensaje</button>
       </div>
     </nav>
     <!-- REDES: cambiá los href por las cuentas reales (buscá REDES en el código) -->
@@ -181,6 +171,7 @@
           Soy Alumno
         </button>
       </div>
+      <button type="button" onclick="showScreen('contact')" class="text-xs font-bold text-slate-400 hover:text-brand-blue transition">¿Necesitás ayuda? Contactanos →</button>
     </section>
 
     <!-- PANTALLA 2: AUTENTICACIÓN DOCENTE -->
@@ -279,6 +270,35 @@
       </div>
       <div id="teacher-classes-list" class="space-y-3">
         <p class="text-xs text-slate-400 italic">Cargando…</p>
+      </div>
+    </section>
+
+    <!-- PANTALLA 4c: CONTACTO (formulario grande, como Mis Clases) -->
+    <section id="screen-contact" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-lg mx-auto space-y-6">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="font-display font-bold text-xl text-slate-900">Contáctanos</h2>
+          <p class="text-xs text-slate-500 mt-1">Escribinos a <a href="mailto:aldairrojasvelasquez377@gmail.com" class="font-bold text-brand-blue">aldairrojasvelasquez377@gmail.com</a> o llená el formulario.</p>
+        </div>
+        <button type="button" onclick="showScreen('role-selector')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Volver</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Tu nombre (máx. 50)</label>
+          <input type="text" id="contact-name" maxlength="50" placeholder="Ej. Juan Pérez" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Tu correo (máx. 80)</label>
+          <input type="email" id="contact-email" maxlength="80" placeholder="tu@correo.com" class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Mensaje (máx. 500)</label>
+          <textarea id="contact-message" maxlength="500" rows="5" placeholder="Contanos en qué te ayudamos..." class="w-full px-4 py-3 text-sm rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none"></textarea>
+          <div class="flex justify-between items-center mt-1">
+            <span id="contact-counter" class="text-[10px] text-slate-400">0/500</span>
+          </div>
+        </div>
+        <button type="button" onclick="sendContactMessage()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3.5 rounded-full text-sm transition shadow-md">Enviar mensaje</button>
       </div>
     </section>
 
@@ -850,7 +870,7 @@
     }
 
     function showScreen(screenName) {
-      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-classes', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
+      const screens = ['role-selector', 'teacher-auth', 'student-auth', 'teacher-dashboard', 'teacher-classes', 'contact', 'teacher-live-class', 'teacher-report', 'student-join', 'student-live-view'];
       screens.forEach(s => {
         const elem = document.getElementById(`screen-${s}`);
         if (elem) elem.classList.add('hidden');
@@ -867,6 +887,7 @@
         if (screenName === 'teacher-dashboard') status.innerText = teacherProfile ? `Prof. ${teacherProfile.name}` : 'Panel Docente';
         if (screenName === 'teacher-live-class') status.innerText = `Clase en Vivo: ${currentClass.code}`;
         if (screenName === 'teacher-report') status.innerText = 'Reporte Final';
+        if (screenName === 'contact') status.innerText = 'Contacto';
         if (screenName === 'student-join') status.innerText = teacherProfile ? `Alumno · ${teacherProfile.name}` : 'Alumno';
         if (screenName === 'student-live-view') status.innerText = 'En Clase';
       }
