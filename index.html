@@ -214,8 +214,18 @@
       </div>
 
       <div class="text-center space-y-1">
-        <h2 id="student-auth-title" class="font-display font-bold text-xl text-slate-900">Acceso Alumno</h2>
+        <h2 id="student-auth-title" class="font-display font-bold text-xl text-slate-900">Iniciar Sesión</h2>
         <p class="text-xs text-slate-500">Ingresa con tu cuenta de Google para participar.</p>
+      </div>
+
+      <!-- PESTAÑAS LOGIN / REGISTRO (igual que Docente) -->
+      <div class="flex bg-slate-100 p-1 rounded-full border border-slate-200">
+        <button type="button" onclick="switchStudentTab('login')" id="tab-student-login" class="flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition">
+          Iniciar Sesión
+        </button>
+        <button type="button" onclick="switchStudentTab('register')" id="tab-student-register" class="flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition">
+          Crear Cuenta
+        </button>
       </div>
 
       <div class="space-y-4 pt-2">
@@ -922,6 +932,24 @@
       }
     }
 
+    // Igual que Docente, para que ambas pantallas de login se vean iguales
+    function switchStudentTab(mode) {
+      const btnLogin = document.getElementById('tab-student-login');
+      const btnRegister = document.getElementById('tab-student-register');
+      const title = document.getElementById('student-auth-title');
+      const activeClass = 'flex-1 py-2 text-xs font-bold rounded-full bg-white text-slate-900 shadow-sm transition';
+      const inactiveClass = 'flex-1 py-2 text-xs font-bold rounded-full text-slate-500 transition';
+      if (mode === 'login') {
+        if (btnLogin) btnLogin.className = activeClass;
+        if (btnRegister) btnRegister.className = inactiveClass;
+        if (title) title.innerText = 'Iniciar Sesión';
+      } else {
+        if (btnRegister) btnRegister.className = activeClass;
+        if (btnLogin) btnLogin.className = inactiveClass;
+        if (title) title.innerText = 'Crear Cuenta de Alumno';
+      }
+    }
+
     function handleStudentAuth(e) {
       if (e) e.preventDefault();
       // Si el alumno decidió usar Google, lo mandamos a loguearse. 
@@ -1448,6 +1476,7 @@
     window.selectRole = selectRole;
     window.showScreen = showScreen;
     window.switchTeacherTab = switchTeacherTab;
+    window.switchStudentTab = switchStudentTab;
     window.handleGoogleLogin = handleGoogleLogin;
     window.handleStudentAuth = handleStudentAuth;
     window.createAndStartClass = createAndStartClass;
