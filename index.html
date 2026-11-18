@@ -361,6 +361,7 @@
         </div>
         <div id="live-comp-bars" class="space-y-2"></div>
         <div id="live-pace-bars" class="space-y-2 pt-2"></div>
+        <div id="live-emocion-bars" class="space-y-2 pt-2"></div>
       </div>
 
       <div class="space-y-3 pt-2">
@@ -403,6 +404,8 @@
         <div id="report-comp-bars" class="space-y-3"></div>
         <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Ritmo</h3>
         <div id="report-pace-bars" class="space-y-3"></div>
+        <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Estado Emocional</h3>
+        <div id="report-emocion-bars" class="space-y-3"></div>
         <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Comprensión por Checkpoint (cada 20 min)</h3>
         <div id="report-checkpoint-bars" class="space-y-3"></div>
         <p id="report-checkpoint-summary" class="text-xs text-slate-500 italic"></p>
@@ -471,11 +474,20 @@
           <button type="button" onclick="studentSendSignal('ritmo', 'rapido')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">⚡ Rápido</button>
         </div>
       </div>
+      <div class="space-y-2">
+        <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">😊 ¿Cómo te sentís?</h4>
+        <div id="group-emocion" class="grid grid-cols-5 gap-2">
+          <button type="button" onclick="studentSendSignal('emocion', 'bien')" class="p-2.5 bg-green-50 hover:bg-green-100 border border-green-200 text-brand-green font-bold text-xs rounded-2xl transition">😊 Bien</button>
+          <button type="button" onclick="studentSendSignal('emocion', 'neutral')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">😐 Neutral</button>
+          <button type="button" onclick="studentSendSignal('emocion', 'frustrado')" class="p-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-brand-rose font-bold text-xs rounded-2xl transition">😤 Frustrado</button>
+          <button type="button" onclick="studentSendSignal('emocion', 'cansado')" class="p-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-brand-amber font-bold text-xs rounded-2xl transition">😴 Cansado</button>
+          <button type="button" onclick="studentSendSignal('emocion', 'motivado')" class="p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-brand-blue font-bold text-xs rounded-2xl transition">🔥 Motivado</button>
+        </div>
+      </div>
 
       <div class="space-y-2 pt-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Enviar Pregunta Anónima al Profesor</h4>
         <div class="flex gap-2">
-          <input type="text" id="student-anonymous-question-input" maxlength="200" placeholder="Escribe tu duda sin revelar tu identidad... (máx. 200)" class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
           <button type="button" id="btn-send-question" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">Enviar</button>
         </div>
       </div>
@@ -512,7 +524,7 @@
       secondsElapsed: 0,
       studentsCount: 0,
       questions: [],
-      signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 },
+      signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0, bien: 0, neutral: 0, frustrado: 0, cansado: 0, motivado: 0 },
       checkpoints: {},   // { 1: {seguro,parcial,perdido,lento,adecuado,rapido}, ... }
       currentCheckpoint: 1
     };
@@ -826,7 +838,7 @@
 
       const num = (v) => (typeof v === 'number' && Number.isFinite(v)) ? v : 0;
       const sig = row.signals && typeof row.signals === 'object' ? row.signals : row;
-      ['seguro','parcial','perdido','lento','adecuado','rapido'].forEach((k) => {
+      ['seguro','parcial','perdido','lento','adecuado','rapido','bien','neutral','frustrado','cansado','motivado'].forEach((k) => {
         if (typeof sig[k] === 'number') currentClass.signals[k] = sig[k];
       });
       const students = num(row.total_students) || num(row.students_count);
@@ -847,7 +859,8 @@
           if (c && typeof c.checkpoint === 'number') {
             map[c.checkpoint] = {
               seguro: Number(c.seguro) || 0, parcial: Number(c.parcial) || 0, perdido: Number(c.perdido) || 0,
-              lento: Number(c.lento) || 0, adecuado: Number(c.adecuado) || 0, rapido: Number(c.rapido) || 0
+              lento: Number(c.lento) || 0, adecuado: Number(c.adecuado) || 0, rapido: Number(c.rapido) || 0,
+              bien: Number(c.bien) || 0, neutral: Number(c.neutral) || 0, frustrado: Number(c.frustrado) || 0, cansado: Number(c.cansado) || 0, motivado: Number(c.motivado) || 0
             };
           }
         });
@@ -855,7 +868,7 @@
         Object.keys(map).forEach((k) => {
           if (!currentClass.checkpoints[k]) currentClass.checkpoints[k] = map[k];
           else {
-            ['seguro','parcial','perdido','lento','adecuado','rapido'].forEach((v) => {
+            ['seguro','parcial','perdido','lento','adecuado','rapido','bien','neutral','frustrado','cansado','motivado'].forEach((v) => {
               currentClass.checkpoints[k][v] = Math.max(currentClass.checkpoints[k][v] || 0, map[k][v] || 0);
             });
           }
@@ -1209,7 +1222,7 @@
         return { cp: Number(k), seguro: seg, parcial: par, perdido: per, total: tot, score: sc };
       }).sort((a, b) => a.cp - b.cp);
 
-      lastReport = { course: report.course, topic: report.topic, code: report.code, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, questions: texts, checkpoints: cpEntries };
+      lastReport = { course: report.course, topic: report.topic, code: report.code, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, bien, neutral, frustrado, cansado, motivado, questions: texts, checkpoints: cpEntries };
       const mm = String(Math.floor(report.seconds / 60)).padStart(2, '0');
       const ss = String(report.seconds % 60).padStart(2, '0');
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
@@ -1231,6 +1244,21 @@
         barRow('🐢 Lento', lento, totalPace, '#94a3b8') +
         barRow('🙂 Adecuado', adecuado, totalPace, '#3b82f6') +
         barRow('⚡ Rápido', rapido, totalPace, '#ef4444');
+
+      // Estado emocional
+      const emocionBars = document.getElementById('report-emocion-bars');
+      const bien = num(sig.bien) || currentClass.signals.bien;
+      const neutral = num(sig.neutral) || currentClass.signals.neutral;
+      const frustrado = num(sig.frustrado) || currentClass.signals.frustrado;
+      const cansado = num(sig.cansado) || currentClass.signals.cansado;
+      const motivado = num(sig.motivado) || currentClass.signals.motivado;
+      const totalE = bien + neutral + frustrado + cansado + motivado;
+      if (emocionBars) emocionBars.innerHTML =
+        barRow('😊 Bien', bien, totalE, '#22c55e') +
+        barRow('😐 Neutral', neutral, totalE, '#94a3b8') +
+        barRow('😤 Frustrado', frustrado, totalE, '#ef4444') +
+        barRow('😴 Cansado', cansado, totalE, '#f59e0b') +
+        barRow('🔥 Motivado', motivado, totalE, '#3b82f6');
 
       // Checkpoints: comprensión por checkpoint (cada 20 min)
       const cpBox = document.getElementById('report-checkpoint-bars');
@@ -1353,6 +1381,16 @@
       push(pad(['🙂 Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%', '', '', '', '']));
       push(pad(['⚡ Rápido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%', '', '', '', '']));
       push(pad(['TOTAL', totP, '100%', '', '', '', '']));
+      push(pad(['']));
+      push(pad(['ESTADO EMOCIONAL', '', '', '', '', '', '']));
+      push(pad(['Estado', 'Cantidad', 'Porcentaje', '', '', '', '']));
+      const totE = (r.bien||0)+(r.neutral||0)+(r.frustrado||0)+(r.cansado||0)+(r.motivado||0);
+      push(pad(['😊 Bien', r.bien||0, totE ? Math.round((r.bien||0)/totE*100)+'%' : '0%', '', '', '', '']));
+      push(pad(['😐 Neutral', r.neutral||0, totE ? Math.round((r.neutral||0)/totE*100)+'%' : '0%', '', '', '', '']));
+      push(pad(['😤 Frustrado', r.frustrado||0, totE ? Math.round((r.frustrado||0)/totE*100)+'%' : '0%', '', '', '', '']));
+      push(pad(['😴 Cansado', r.cansado||0, totE ? Math.round((r.cansado||0)/totE*100)+'%' : '0%', '', '', '', '']));
+      push(pad(['🔥 Motivado', r.motivado||0, totE ? Math.round((r.motivado||0)/totE*100)+'%' : '0%', '', '', '', '']));
+      push(pad(['TOTAL', totE, '100%', '', '', '', '']));
       push(pad(['']));
       if (Array.isArray(r.checkpoints) && r.checkpoints.length) {
         push(pad(['COMPRESIÓN POR CHECKPOINT (cada 20 min)', '', '', '', '', '', '']));
@@ -1613,6 +1651,17 @@
           return '<div><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>'+label+'</span><span>'+count+' ('+pct+'%)</span></div><div class="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+hex+'"></div></div></div>';
         };
         paceBox.innerHTML = row('🐢 Lento', s.lento||0, '#94a3b8') + row('🙂 Adecuado', s.adecuado||0, '#3b82f6') + row('⚡ Rápido', s.rapido||0, '#ef4444');
+      }
+      const emocionBox = document.getElementById('live-emocion-bars');
+      if (emocionBox) {
+        const s = currentClass.signals;
+        const total = (s.bien||0)+(s.neutral||0)+(s.frustrado||0)+(s.cansado||0)+(s.motivado||0);
+        const row = (label, count, hex) => {
+          const pct = total > 0 ? Math.round((count/total)*100) : 0;
+          return '<div><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>'+label+'</span><span>'+count+' ('+pct+'%)</span></div><div class="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+hex+'"></div></div></div>';
+        };
+        emocionBox.innerHTML = '<h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider pt-2">Estado Emocional</h4>' +
+          row('😊 Bien', s.bien||0, '#22c55e') + row('😐 Neutral', s.neutral||0, '#94a3b8') + row('😤 Frustrado', s.frustrado||0, '#ef4444') + row('😴 Cansado', s.cansado||0, '#f59e0b') + row('🔥 Motivado', s.motivado||0, '#3b82f6');
       }
     }
      function updateTeacherLiveStats() {
