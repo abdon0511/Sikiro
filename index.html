@@ -349,6 +349,15 @@
         </div>
       </div>
 
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-display font-bold text-sm text-slate-900">En Vivo · Comprensión por Checkpoint</h3>
+          <span id="live-checkpoint" class="text-[10px] font-bold text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">Checkpoint 1</span>
+        </div>
+        <div id="live-comp-bars" class="space-y-2"></div>
+        <div id="live-pace-bars" class="space-y-2 pt-2"></div>
+      </div>
+
       <div class="space-y-3 pt-2">
         <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas de los Alumnos</h3>
         <div id="teacher-anonymous-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -389,6 +398,9 @@
         <div id="report-comp-bars" class="space-y-3"></div>
         <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Ritmo</h3>
         <div id="report-pace-bars" class="space-y-3"></div>
+        <h3 class="font-display font-bold text-sm text-slate-900 pt-2">Comprensión por Checkpoint (cada 20 min)</h3>
+        <div id="report-checkpoint-bars" class="space-y-3"></div>
+        <p id="report-checkpoint-summary" class="text-xs text-slate-500 italic"></p>
       </div>
 
       <div class="space-y-3">
@@ -495,7 +507,9 @@
       secondsElapsed: 0,
       studentsCount: 0,
       questions: [],
-      signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 }
+      signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 },
+      checkpoints: {},   // { 1: {seguro,parcial,perdido,lento,adecuado,rapido}, ... }
+      currentCheckpoint: 1
     };
 
     // ==========================================
@@ -617,10 +631,17 @@
         })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
           if (currentRole === 'teacher' && payload.payload) {
-            const { kind, val } = payload.payload;
+            const { kind, val, checkpoint } = payload.payload;
+            const cp = checkpoint || currentClass.currentCheckpoint || 1;
             if (kind && currentClass.signals[val] !== undefined) {
               currentClass.signals[val]++;
+              // Acumular por checkpoint
+              if (!currentClass.checkpoints[cp]) {
+                currentClass.checkpoints[cp] = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
+              }
+              currentClass.checkpoints[cp][val]++;
               updateTeacherLiveStats();
+              renderLiveCharts();
             }
           }
         })
@@ -813,7 +834,30 @@
         // Sin duplicar: si ya tenemos las mismas, no re-agregar
         if (texts.length > currentClass.questions.length) currentClass.questions = texts.reverse();
       }
+      // Checkpoints por checkpoint (cada 20 min)
+      const cps = row.checkpoints;
+      if (Array.isArray(cps) && cps.length) {
+        const map = {};
+        cps.forEach((c) => {
+          if (c && typeof c.checkpoint === 'number') {
+            map[c.checkpoint] = {
+              seguro: Number(c.seguro) || 0, parcial: Number(c.parcial) || 0, perdido: Number(c.perdido) || 0,
+              lento: Number(c.lento) || 0, adecuado: Number(c.adecuado) || 0, rapido: Number(c.rapido) || 0
+            };
+          }
+        });
+        // Fusionar con lo que ya tenemos (sin perder conteos en vivo)
+        Object.keys(map).forEach((k) => {
+          if (!currentClass.checkpoints[k]) currentClass.checkpoints[k] = map[k];
+          else {
+            ['seguro','parcial','perdido','lento','adecuado','rapido'].forEach((v) => {
+              currentClass.checkpoints[k][v] = Math.max(currentClass.checkpoints[k][v] || 0, map[k][v] || 0);
+            });
+          }
+        });
+      }
       updateTeacherLiveStats();
+      renderLiveCharts();
     }
 
     // FIX #4: Volver a abrir la clase activa tras un refresh.
@@ -1006,6 +1050,8 @@
       prevPresenceCount = 0;
       currentClass.questions = [];
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
+      currentClass.checkpoints = {};
+      currentClass.currentCheckpoint = 1;
       const topicElem = document.getElementById('display-course-topic');
       const codeElem = document.getElementById('display-class-code');
       if (topicElem) topicElem.innerText = `${course} - ${topic}`;
@@ -1061,6 +1107,13 @@
           const secs = String(currentClass.secondsElapsed % 60).padStart(2, '0');
           const timerElem = document.getElementById('stat-class-timer');
           if (timerElem) timerElem.innerText = `${mins}:${secs}`;
+          // Actualizar checkpoint cada 20 min (1200s)
+          const cp = Math.floor(currentClass.secondsElapsed / 1200) + 1;
+          if (cp !== currentClass.currentCheckpoint) {
+            currentClass.currentCheckpoint = cp;
+            const lc = document.getElementById('live-checkpoint');
+            if (lc) lc.innerText = 'Checkpoint ' + cp;
+          }
         }, 1000);
         showToast('Clase iniciada');
       } else {
@@ -1137,7 +1190,21 @@
       const merged = [...new Set([...dbQs, ...localQs])];
       const texts = merged.map((q) => (typeof q === 'string' ? q : q.content || q.text || '')).filter(Boolean);
 
-      lastReport = { course: report.course, topic: report.topic, code: report.code, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, questions: texts };
+      // Checkpoints por checkpoint (cada 20 min): comprensión por checkpoint
+      const dbCps = Array.isArray(s.checkpoints) ? s.checkpoints : [];
+      const localCps = report._keepLocal === false ? {} : (currentClass.checkpoints || {});
+      const cpMap = {};
+      dbCps.forEach((c) => { if (c && typeof c.checkpoint === 'number') cpMap[c.checkpoint] = c; });
+      Object.keys(localCps).forEach((k) => { if (!cpMap[k]) cpMap[k] = localCps[k]; });
+      const cpEntries = Object.keys(cpMap).map((k) => {
+        const c = cpMap[k];
+        const seg = Number(c.seguro) || 0, par = Number(c.parcial) || 0, per = Number(c.perdido) || 0;
+        const tot = seg + par + per;
+        const sc = tot > 0 ? Math.round(((seg + par * 0.5) / tot) * 100) : 100;
+        return { cp: Number(k), seguro: seg, parcial: par, perdido: per, total: tot, score: sc };
+      }).sort((a, b) => a.cp - b.cp);
+
+      lastReport = { course: report.course, topic: report.topic, code: report.code, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, questions: texts, checkpoints: cpEntries };
       const mm = String(Math.floor(report.seconds / 60)).padStart(2, '0');
       const ss = String(report.seconds % 60).padStart(2, '0');
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
@@ -1160,7 +1227,31 @@
         barRow('🙂 Adecuado', adecuado, totalPace, '#3b82f6') +
         barRow('⚡ Rápido', rapido, totalPace, '#ef4444');
 
-      const qBox = document.getElementById('report-questions');
+      // Checkpoints: comprensión por checkpoint (cada 20 min)
+      const cpBox = document.getElementById('report-checkpoint-bars');
+      const cpSummary = document.getElementById('report-checkpoint-summary');
+      if (cpBox) {
+        if (!cpEntries.length) {
+          cpBox.innerHTML = '<p class="text-xs text-slate-400 italic">No hubo señales por checkpoint.</p>';
+          if (cpSummary) cpSummary.innerText = '';
+        } else {
+          cpBox.innerHTML = cpEntries.map((e) => {
+            const label = 'Checkpoint ' + e.cp + ' · min ' + ((e.cp-1)*20) + '-' + (e.cp*20);
+            const bar = '<div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:' + e.score + '%;background:' + (e.score >= 70 ? '#22c55e' : e.score >= 40 ? '#f59e0b' : '#ef4444') + '"></div></div>';
+            return '<div><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>' + escapeHtml(label) + '</span><span>' + e.score + '% · 🟢' + e.seguro + ' 🟡' + e.parcial + ' 🔴' + e.perdido + '</span></div>' + bar + '</div>';
+          }).join('');
+          if (cpSummary) {
+            const valid = cpEntries.filter((e) => e.total > 0);
+            if (valid.length >= 2) {
+              const lowest = valid.reduce((a, b) => a.score < b.score ? a : b);
+              const highest = valid.reduce((a, b) => a.score > b.score ? a : b);
+              cpSummary.innerText = 'Menor comprensión en Checkpoint ' + lowest.cp + ' (' + lowest.score + '%) · Mayor en Checkpoint ' + highest.cp + ' (' + highest.score + '%)';
+            } else if (valid.length === 1) {
+              cpSummary.innerText = 'Solo Checkpoint ' + valid[0].cp + ' tuvo señales (' + valid[0].score + '%).';
+            }
+          }
+        }
+      }
       if (qBox) qBox.innerHTML = texts.length === 0
         ? '<p class="text-xs text-slate-400 italic">No hubo preguntas.</p>'
         : texts.map((q) => '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 flex justify-between gap-2"><span>"' + escapeHtml(q) + '"</span><span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded h-fit">Anónimo</span></div>').join('');
@@ -1202,6 +1293,7 @@
       currentClass.id = id; currentClass.code = code; currentClass.course = course; currentClass.topic = topic;
       currentClass.isStarted = status === 'active'; currentClass.secondsElapsed = 0; currentClass.studentsCount = 0; prevPresenceCount = 0;
       currentClass.questions = []; currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
+      currentClass.checkpoints = {}; currentClass.currentCheckpoint = 1;
       const t = document.getElementById('display-course-topic'); if (t) t.innerText = course + ' - ' + topic;
       const c = document.getElementById('display-class-code'); if (c) c.innerText = 'CÓDIGO: ' + code;
       connectToLiveRoom(code); updateTeacherLiveStats(); persistActiveClass(); startStatsPolling(); showScreen('teacher-live-class');
@@ -1344,21 +1436,23 @@
 
       // Guardamos la señal en Supabase
       // FIX #2: Solo hacemos broadcast si la BD aceptó la señal.
-      const { error } = await supabaseClient.rpc('send_sikiro_signal', {
+      const { data: cpData, error } = await supabaseClient.rpc('send_sikiro_signal', {
         p_class_id: currentClass.id,
         p_kind: kind,
-        p_value: val
+        p_value: val,
+        p_checkpoint: currentClass.currentCheckpoint || 1
       });
       if (error) {
         showToast('Error al registrar: ' + error.message);
         refreshSignalCooldowns();
         return;
       }
+      const cp = (typeof cpData === 'number') ? cpData : (Array.isArray(cpData) ? cpData[0] : (cpData?.checkpoint || currentClass.currentCheckpoint || 1));
       localStorage.setItem(signalStorageKey(kind), String(Date.now()));
 
       // También la enviamos en vivo para que el profesor la vea al instante
       if (liveChannel) {
-        liveChannel.send({ type: 'broadcast', event: 'STUDENT_SIGNAL', payload: { kind, val } });
+        liveChannel.send({ type: 'broadcast', event: 'STUDENT_SIGNAL', payload: { kind, val, checkpoint: cp } });
       }
       showToast('✓ Respuesta registrada');
     }
@@ -1421,9 +1515,30 @@
       setTimeout(() => { if (sendBtn) { sendBtn.disabled = false; sendBtn.innerText = 'Enviar'; } }, 15000);
     }
 
-    function updateTeacherLiveStats() {
-      const studElem = document.getElementById('stat-students-count');
-      if (studElem) studElem.innerText = currentClass.studentsCount;
+    function renderLiveCharts() {
+      const compBox = document.getElementById('live-comp-bars');
+      const paceBox = document.getElementById('live-pace-bars');
+      const cpBadge = document.getElementById('live-checkpoint');
+      if (cpBadge) cpBadge.innerText = 'Checkpoint ' + (currentClass.currentCheckpoint || 1);
+      if (compBox) {
+        const s = currentClass.signals;
+        const total = (s.seguro||0)+(s.parcial||0)+(s.perdido||0);
+        const row = (label, count, hex) => {
+          const pct = total > 0 ? Math.round((count/total)*100) : 0;
+          return '<div><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>'+label+'</span><span>'+count+' ('+pct+'%)</span></div><div class="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+hex+'"></div></div></div>';
+        };
+        compBox.innerHTML = row('🟢 Entendido', s.seguro||0, '#22c55e') + row('🟡 A Medias', s.parcial||0, '#f59e0b') + row('🔴 Confundido', s.perdido||0, '#ef4444');
+      }
+      if (paceBox) {
+        const s = currentClass.signals;
+        const total = (s.lento||0)+(s.adecuado||0)+(s.rapido||0);
+        const row = (label, count, hex) => {
+          const pct = total > 0 ? Math.round((count/total)*100) : 0;
+          return '<div><div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>'+label+'</span><span>'+count+' ('+pct+'%)</span></div><div class="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:'+pct+'%;background:'+hex+'"></div></div></div>';
+        };
+        paceBox.innerHTML = row('🐢 Lento', s.lento||0, '#94a3b8') + row('🙂 Adecuado', s.adecuado||0, '#3b82f6') + row('⚡ Rápido', s.rapido||0, '#ef4444');
+      }
+    }
       // El resto de la lógica visual de estadísticas se mantiene igual...
       const { lento, adecuado, rapido } = currentClass.signals;
       let paceText = 'Adecuado';
@@ -1445,6 +1560,8 @@
       if (totalComp > 0) score = Math.round(((seguro * 1.0 + parcial * 0.5) / totalComp) * 100);
       const compElem = document.getElementById('stat-comprehension-score');
       if (compElem) compElem.innerText = `${score}%`;
+
+      renderLiveCharts();
 
       const questionsContainer = document.getElementById('teacher-anonymous-questions');
       if (questionsContainer) {
