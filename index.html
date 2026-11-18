@@ -1320,76 +1320,69 @@
     function downloadReportCSV() {
       if (!lastReport) return;
       const r = lastReport;
-      const wb = (typeof XLSX !== 'undefined') ? XLSX.utils.book_new() : null;
+      const rows = [];
+      const push = (a) => rows.push(a);
+      const W = 7; // ancho fijo del cuadro (7 columnas)
+      const pad = (a) => { const out = a.slice(); while (out.length < W) out.push(''); return out; };
 
-      // Hoja 1: Resumen
-      const resumen = [
-        ['SIKIRO - REPORTE FINAL DE CLASE'],
-        [],
-        ['Campo', 'Valor'],
-        ['Curso / Materia', r.course],
-        ['Tema', r.topic],
-        ['Código de clase', r.code],
-        ['Duración (min)', (r.seconds / 60).toFixed(1)],
-        ['Alumnos conectados', r.students],
-        ['Comprensión global (%)', r.score],
-        ['Ritmo predominante', r.pace],
-        ['Preguntas anónimas', (r.questions || []).length],
-      ];
-      if (wb) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), 'Resumen');
-
-      // Hoja 2: Comprensión
+      push(pad(['SIKIRO - REPORTE FINAL DE CLASE', '', '', '', '', '', '']));
+      push(pad(['']));
+      push(pad(['DATOS GENERALES', '', '', '', '', '', '']));
+      push(pad(['Campo', 'Valor', '', '', '', '', '']));
+      push(pad(['Curso / Materia', r.course, '', '', '', '', '']));
+      push(pad(['Tema', r.topic, '', '', '', '', '']));
+      push(pad(['Código de clase', r.code, '', '', '', '', '']));
+      push(pad(['Duración (min)', (r.seconds / 60).toFixed(1), '', '', '', '', '']));
+      push(pad(['Alumnos conectados', r.students, '', '', '', '', '']));
+      push(pad(['Comprensión global (%)', r.score, '', '', '', '', '']));
+      push(pad(['Ritmo predominante', r.pace, '', '', '', '', '']));
+      push(pad(['Preguntas anónimas', (r.questions || []).length, '', '', '', '', '']));
+      push(pad(['']));
+      push(pad(['COMPRESIÓN', '', '', '', '', '', '']));
+      push(pad(['Respuesta', 'Cantidad', 'Porcentaje', '', '', '', '']));
       const totC = r.seguro + r.parcial + r.perdido;
-      const comp = [
-        ['COMPRESIÓN'],
-        ['Respuesta', 'Cantidad', 'Porcentaje'],
-        ['🟢 Entendido', r.seguro, totC ? Math.round(r.seguro / totC * 100) + '%' : '0%'],
-        ['🟡 A Medias', r.parcial, totC ? Math.round(r.parcial / totC * 100) + '%' : '0%'],
-        ['🔴 Confundido', r.perdido, totC ? Math.round(r.perdido / totC * 100) + '%' : '0%'],
-        ['TOTAL', totC, '100%'],
-      ];
-      if (wb) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(comp), 'Comprension');
-
-      // Hoja 3: Ritmo
+      push(pad(['🟢 Entendido', r.seguro, totC ? Math.round(r.seguro / totC * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['🟡 A Medias', r.parcial, totC ? Math.round(r.parcial / totC * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['🔴 Confundido', r.perdido, totC ? Math.round(r.perdido / totC * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['TOTAL', totC, '100%', '', '', '', '']));
+      push(pad(['']));
+      push(pad(['RITMO', '', '', '', '', '', '']));
+      push(pad(['Ritmo', 'Cantidad', 'Porcentaje', '', '', '', '']));
       const totP = r.lento + r.adecuado + r.rapido;
-      const ritmo = [
-        ['RITMO'],
-        ['Ritmo', 'Cantidad', 'Porcentaje'],
-        ['🐢 Lento', r.lento, totP ? Math.round(r.lento / totP * 100) + '%' : '0%'],
-        ['🙂 Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%'],
-        ['⚡ Rápido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%'],
-        ['TOTAL', totP, '100%'],
-      ];
-      if (wb) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ritmo), 'Ritmo');
-
-      // Hoja 4: Checkpoints
+      push(pad(['🐢 Lento', r.lento, totP ? Math.round(r.lento / totP * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['🙂 Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['⚡ Rápido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%', '', '', '', '']));
+      push(pad(['TOTAL', totP, '100%', '', '', '', '']));
+      push(pad(['']));
       if (Array.isArray(r.checkpoints) && r.checkpoints.length) {
-        const cp = [['COMPRESIÓN POR CHECKPOINT (cada 20 min)'], ['Checkpoint', 'Minutos', '🟢 Entendido', '🟡 A Medias', '🔴 Confundido', 'Total', 'Comprensión (%)']];
+        push(pad(['COMPRESIÓN POR CHECKPOINT (cada 20 min)', '', '', '', '', '', '']));
+        push(pad(['Checkpoint', 'Minutos', '🟢 Entendido', '🟡 A Medias', '🔴 Confundido', 'Total', 'Comprensión (%)']));
         r.checkpoints.forEach((e) => {
-          cp.push(['Checkpoint ' + e.cp, ((e.cp - 1) * 20) + '-' + (e.cp * 20), e.seguro, e.parcial, e.perdido, e.total, e.score + '%']);
+          push(pad(['Checkpoint ' + e.cp, ((e.cp - 1) * 20) + '-' + (e.cp * 20), e.seguro, e.parcial, e.perdido, e.total, e.score + '%']));
         });
         const valid = r.checkpoints.filter((e) => e.total > 0);
         if (valid.length >= 2) {
           const lowest = valid.reduce((a, b) => a.score < b.score ? a : b);
           const highest = valid.reduce((a, b) => a.score > b.score ? a : b);
-          cp.push([]);
-          cp.push(['Menor comprensión', 'Checkpoint ' + lowest.cp + ' (' + lowest.score + '%)']);
-          cp.push(['Mayor comprensión', 'Checkpoint ' + highest.cp + ' (' + highest.score + '%)']);
+          push(pad(['']));
+          push(pad(['Menor comprensión', 'Checkpoint ' + lowest.cp + ' (' + lowest.score + '%)', '', '', '', '', '']));
+          push(pad(['Mayor comprensión', 'Checkpoint ' + highest.cp + ' (' + highest.score + '%)', '', '', '', '', '']));
         }
-        if (wb) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cp), 'Checkpoints');
+        push(pad(['']));
       }
+      push(pad(['PREGUNTAS ANÓNIMAS', '', '', '', '', '', '']));
+      push(pad(['#', 'Pregunta', '', '', '', '', '']));
+      (r.questions || []).forEach((q, i) => push(pad([i + 1, q, '', '', '', '', ''])));
+      if (!(r.questions || []).length) push(pad(['(sin preguntas)', '', '', '', '', '', '']));
 
-      // Hoja 5: Preguntas
-      const preg = [['PREGUNTAS ANÓNIMAS'], ['#', 'Pregunta']];
-      (r.questions || []).forEach((q, i) => preg.push([i + 1, q]));
-      if (!(r.questions || []).length) preg.push(['(sin preguntas)']);
-      if (wb) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(preg), 'Preguntas');
-
-      if (wb) {
+      if (typeof XLSX !== 'undefined') {
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        // Anchos de columna
+        ws['!cols'] = [{ wch: 26 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 16 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
         XLSX.writeFile(wb, 'sikiro-reporte-' + r.code + '.xlsx');
       } else {
-        // Fallback CSV si SheetJS no cargó
-        const rows = [...resumen, [], ...comp, [], ...ritmo];
         const csv = rows.map((row) => row.map((c) => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
         const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
         const a = document.createElement('a'); a.href = url; a.download = 'sikiro-reporte-' + r.code + '.csv'; a.click(); URL.revokeObjectURL(url);
