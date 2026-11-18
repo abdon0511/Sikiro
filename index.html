@@ -73,8 +73,10 @@
     html[data-theme="dark"] .hover\:bg-slate-50:hover, html[data-theme="dark"] .hover\:bg-slate-100:hover { background-color: #1e293b !important; }
 
     @media print {
-      header, #toast-container, .no-print { display: none !important; }
+      header, #toast-container, .no-print, aside { display: none !important; }
       body { background: white !important; }
+      main { max-width: 100% !important; }
+      section { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
     }
   </style>
 </head>
@@ -374,7 +376,7 @@
         <p id="report-meta" class="text-xs text-slate-500 mt-1">CÓDIGO: ---- · Duración: 00:00</p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center no-print">
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-students" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
           <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos</span>
@@ -403,7 +405,7 @@
         <p id="report-checkpoint-summary" class="text-xs text-slate-500 italic"></p>
       </div>
 
-      <div class="space-y-3">
+      <div class="space-y-3 no-print">
         <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas</h3>
         <div id="report-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
       </div>
