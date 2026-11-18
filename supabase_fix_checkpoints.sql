@@ -1,3 +1,9 @@
+-- DROP de las funciones que cambiaron tipo de retorno
+drop function if exists public.join_sikiro_class(text);
+drop function if exists public.get_sikiro_stats(uuid);
+drop function if exists public.send_sikiro_signal(uuid, text, text, int);
+drop function if exists public.send_sikiro_signal(uuid, text, text);
+
 -- started_at para calcular checkpoints por clase + RPC devuelve el checkpoint asignado
 -- Pegá esto en Supabase > SQL Editor > New query > Run
 
