@@ -412,7 +412,7 @@
         <button type="button" onclick="downloadReportCSV()" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition">⬇ Descargar CSV</button>
         <button type="button" onclick="window.print()" class="flex-1 bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-300">🖨 Imprimir / PDF</button>
       </div>
-      <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+      <button type="button" id="btn-report-back" onclick="showScreen('teacher-dashboard')" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
         Volver al Panel
       </button>
     </section>
@@ -1142,7 +1142,7 @@
       // Guardar datos del reporte antes de limpiar la clase
       const reportData = {
         course: currentClass.course, topic: currentClass.topic, code: currentClass.code,
-        seconds: currentClass.secondsElapsed, stats: stats
+        seconds: currentClass.secondsElapsed, stats: stats, fromFinish: true
       };
       currentClass.isStarted = false;
       // Avisar a los alumnos ANTES de desconectar el canal
@@ -1256,6 +1256,18 @@
       if (qBox) qBox.innerHTML = texts.length === 0
         ? '<p class="text-xs text-slate-400 italic">No hubo preguntas.</p>'
         : texts.map((q) => '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 flex justify-between gap-2"><span>"' + escapeHtml(q) + '"</span><span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded h-fit">Anónimo</span></div>').join('');
+
+      // Botón de vuelta: solo "Volver al Panel" si recién finalizó; si viene del historial, vuelve a Mis Clases
+      const backBtn = document.getElementById('btn-report-back');
+      if (backBtn) {
+        if (report.fromFinish) {
+          backBtn.innerText = 'Volver al Panel';
+          backBtn.onclick = () => showScreen('teacher-dashboard');
+        } else {
+          backBtn.innerText = '← Volver a Mis Clases';
+          backBtn.onclick = () => showScreen('teacher-classes');
+        }
+      }
     }
 
     // ===== OPCIONALES =====
@@ -1287,7 +1299,7 @@
       if (createdAt && finishedAt) seconds = Math.max(0, Math.round((new Date(finishedAt) - new Date(createdAt)) / 1000));
       // Usar los conteos locales solo si coinciden con esta clase
       const keepLocal = currentClass.id === id;
-      showTeacherReport({ course, topic, code, seconds, stats: data, _keepLocal: keepLocal });
+      showTeacherReport({ course, topic, code, seconds, stats: data, _keepLocal: keepLocal, fromFinish: false });
       showScreen('teacher-report');
     }
     function resumeClass(id, code, course, topic, status) {
