@@ -94,7 +94,7 @@
 
   <div class="flex min-h-screen w-full">
   <!-- BARRA LATERAL tipo Supabase -->
-  <aside id="sidebar" class="hidden flex-col w-64 shrink-0 bg-[#0b1220] text-slate-300 min-h-screen sticky top-0 h-screen border-r border-[#26334d] z-30">
+  <aside id="sidebar" class="hidden flex-col w-64 bg-[#0b1220] text-slate-300 h-screen fixed top-0 left-0 border-r border-[#26334d] z-50 shadow-2xl">
     <div class="p-5 border-b border-[#26334d]">
       <div class="flex items-center gap-2 cursor-pointer" onclick="showScreen('role-selector')">
         <img src="logo.png" alt="Sikiro" class="h-8 w-auto" onerror="this.style.display='none'" />
@@ -278,7 +278,6 @@
     <section id="screen-teacher-classes" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-lg mx-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-4">
         <h2 class="font-display font-bold text-xl text-slate-900">Mis Clases</h2>
-        <button type="button" onclick="showScreen('teacher-dashboard')" class="text-xs font-bold text-slate-400 hover:text-slate-600">← Volver</button>
       </div>
       <div id="teacher-classes-list" class="space-y-3">
         <p class="text-xs text-slate-400 italic">Cargando…</p>
@@ -336,21 +335,21 @@
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <span id="stat-students-count" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
-          <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos Conectados</span>
+        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="stat-students-count" class="block font-display font-extrabold text-3xl text-brand-blue">0</span>
+          <span class="text-[11px] font-bold text-slate-500 uppercase">Alumnos Conectados</span>
         </div>
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <span id="stat-class-timer" class="block font-display font-extrabold text-2xl text-slate-800">00:00</span>
-          <span class="text-[10px] font-bold text-slate-500 uppercase">Tiempo de Clase</span>
+        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="stat-class-timer" class="block font-display font-extrabold text-3xl text-slate-800">00:00</span>
+          <span class="text-[11px] font-bold text-slate-500 uppercase">Tiempo de Clase</span>
         </div>
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <span id="stat-pace-status" class="block font-display font-extrabold text-xl text-brand-green">Adecuado</span>
-          <span class="text-[10px] font-bold text-slate-500 uppercase">Ritmo de la Clase</span>
+        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="stat-pace-status" class="block font-display font-extrabold text-2xl text-brand-green">Adecuado</span>
+          <span class="text-[11px] font-bold text-slate-500 uppercase">Ritmo de la Clase</span>
         </div>
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-          <span id="stat-comprehension-score" class="block font-display font-extrabold text-2xl text-brand-amber">100%</span>
-          <span class="text-[10px] font-bold text-slate-500 uppercase">Comprensión</span>
+        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="stat-comprehension-score" class="block font-display font-extrabold text-3xl text-brand-amber">100%</span>
+          <span class="text-[11px] font-bold text-slate-500 uppercase">Comprensión</span>
         </div>
       </div>
 
@@ -754,10 +753,24 @@
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
       if (!sb) return;
-      sb.classList.toggle('hidden');
-      sb.classList.toggle('flex');
+      const open = sb.classList.contains('hidden');
+      sb.classList.toggle('hidden', !open);
+      sb.classList.toggle('flex', open);
+      let bd = document.getElementById('sidebar-backdrop');
+      if (open) {
+        if (!bd) {
+          bd = document.createElement('div');
+          bd.id = 'sidebar-backdrop';
+          bd.className = 'fixed inset-0 bg-black/40 z-40';
+          bd.onclick = toggleSidebar;
+          document.body.appendChild(bd);
+        }
+        bd.classList.remove('hidden');
+      } else if (bd) {
+        bd.classList.add('hidden');
+      }
     }
-    // Sidebar: solo después de iniciar sesión. Sin cuenta, solo se ve la elección de rol.
+    // Sidebar: se abre solo al presionar ☰, no queda abierto todo el rato
     function refreshSidebarVisibility() {
       const sb = document.getElementById('sidebar');
       const generalNav = document.getElementById('sidebar-general-nav');
@@ -765,11 +778,11 @@
       const studentNav = document.getElementById('sidebar-student-nav');
       const role = teacherProfile ? teacherProfile.role : null;
       if (sb) {
-        // Sin sesión: oculto. Con sesión: visible.
-        sb.classList.toggle('hidden', !role);
-        sb.classList.toggle('flex', !!role);
+        sb.classList.add('hidden');
+        sb.classList.remove('flex');
       }
-      // Al loguearse se quita General (Inicio): solo queda su rol
+      const bd = document.getElementById('sidebar-backdrop');
+      if (bd) bd.classList.add('hidden');
       if (generalNav) generalNav.classList.toggle('hidden', !!role);
       if (teacherNav) teacherNav.classList.toggle('hidden', role !== 'teacher');
       if (studentNav) studentNav.classList.toggle('hidden', role !== 'student');
