@@ -1539,6 +1539,9 @@
         paceBox.innerHTML = row('🐢 Lento', s.lento||0, '#94a3b8') + row('🙂 Adecuado', s.adecuado||0, '#3b82f6') + row('⚡ Rápido', s.rapido||0, '#ef4444');
       }
     }
+     function updateTeacherLiveStats() {
+      const studElem = document.getElementById('stat-students-count');
+      if (studElem) studElem.innerText = currentClass.studentsCount;
       // El resto de la lógica visual de estadísticas se mantiene igual...
       const { lento, adecuado, rapido } = currentClass.signals;
       let paceText = 'Adecuado';
