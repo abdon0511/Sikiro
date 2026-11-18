@@ -420,9 +420,14 @@
         <button type="button" onclick="downloadReportCSV()" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition">⬇ Descargar Excel</button>
         <button type="button" onclick="window.print()" class="flex-1 bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-300">🖨 Imprimir / PDF</button>
       </div>
-      <button type="button" id="btn-report-back" onclick="showScreen('teacher-dashboard')" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
-        Volver al Panel
-      </button>
+      <div class="flex gap-2 no-print">
+        <button type="button" id="btn-report-back" onclick="showScreen('teacher-dashboard')" class="flex-1 bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+          Volver al Panel
+        </button>
+        <button type="button" onclick="showScreen('teacher-dashboard')" class="flex-1 bg-brand-green hover:bg-green-700 text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+          ➕ Nueva Clase
+        </button>
+      </div>
     </section>
 
     <!-- PANTALLA 6: UNIRSE A CLASE CON CÓDIGO (ESTRICTO 4 DÍGITOS) -->
