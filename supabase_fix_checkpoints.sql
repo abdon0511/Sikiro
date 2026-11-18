@@ -8,6 +8,7 @@ drop function if exists public.send_sikiro_signal(uuid, text, text);
 -- Pegá esto en Supabase > SQL Editor > New query > Run
 
 alter table public.classes add column if not exists started_at timestamptz;
+alter table public.signals add column if not exists checkpoint int not null default 1;
 
 -- set_sikiro_class_status marca started_at al activar
 create or replace function public.set_sikiro_class_status(p_class_id uuid, p_status text)
@@ -28,6 +29,7 @@ $$;
 create or replace function public.join_sikiro_class(p_code text)
 returns table(class_id uuid, course text, topic text, code text, status text, started_at timestamptz)
 language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
 declare
   v_class_id uuid;
   v_started timestamptz;
@@ -84,3 +86,64 @@ $$;
 
 grant execute on function public.send_sikiro_signal(uuid, text, text, int) to authenticated;
 grant execute on function public.join_sikiro_class(text) to authenticated;
+
+-- get_sikiro_stats ahora devuelve también por checkpoint
+create or replace function public.get_sikiro_stats(p_class_id uuid)
+returns table(
+  seguro bigint, parcial bigint, perdido bigint,
+  lento bigint, adecuado bigint, rapido bigint,
+  bien bigint, neutral bigint, frustrado bigint, cansado bigint, motivado bigint,
+  total_students bigint, questions jsonb,
+  checkpoints jsonb
+)
+language plpgsql security definer set search_path = public as $$
+begin
+  return query
+    select
+      count(*) filter (where s.value = 'seguro')::bigint,
+      count(*) filter (where s.value = 'parcial')::bigint,
+      count(*) filter (where s.value = 'perdido')::bigint,
+      count(*) filter (where s.value = 'lento')::bigint,
+      count(*) filter (where s.value = 'adecuado')::bigint,
+      count(*) filter (where s.value = 'rapido')::bigint,
+      count(*) filter (where s.value = 'bien')::bigint,
+      count(*) filter (where s.value = 'neutral')::bigint,
+      count(*) filter (where s.value = 'frustrado')::bigint,
+      count(*) filter (where s.value = 'cansado')::bigint,
+      count(*) filter (where s.value = 'motivado')::bigint,
+      (select count(*)::bigint from public.class_participants where class_id = p_class_id),
+      coalesce(
+        (select jsonb_agg(q.content order by q.created_at desc) from public.questions q where q.class_id = p_class_id),
+        '[]'::jsonb
+      ),
+      coalesce(
+        (select jsonb_agg(jsonb_build_object(
+          'checkpoint', c.cp,
+          'seguro', c.seguro, 'parcial', c.parcial, 'perdido', c.perdido,
+          'lento', c.lento, 'adecuado', c.adecuado, 'rapido', c.rapido,
+          'bien', c.bien, 'neutral', c.neutral, 'frustrado', c.frustrado, 'cansado', c.cansado, 'motivado', c.motivado
+        ) order by c.cp)
+        from (
+          select s.checkpoint as cp,
+            count(*) filter (where s.value = 'seguro')::bigint as seguro,
+            count(*) filter (where s.value = 'parcial')::bigint as parcial,
+            count(*) filter (where s.value = 'perdido')::bigint as perdido,
+            count(*) filter (where s.value = 'lento')::bigint as lento,
+            count(*) filter (where s.value = 'adecuado')::bigint as adecuado,
+            count(*) filter (where s.value = 'rapido')::bigint as rapido,
+            count(*) filter (where s.value = 'bien')::bigint as bien,
+            count(*) filter (where s.value = 'neutral')::bigint as neutral,
+            count(*) filter (where s.value = 'frustrado')::bigint as frustrado,
+            count(*) filter (where s.value = 'cansado')::bigint as cansado,
+            count(*) filter (where s.value = 'motivado')::bigint as motivado
+          from public.signals s
+          where s.class_id = p_class_id
+          group by s.checkpoint
+        ) c),
+        '[]'::jsonb
+      )
+    from public.signals s where s.class_id = p_class_id;
+end;
+$$;
+
+grant execute on function public.get_sikiro_stats(uuid) to authenticated;
