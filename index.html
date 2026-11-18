@@ -1314,16 +1314,62 @@
     // Exportar reporte CSV
     function downloadReportCSV() {
       if (!lastReport) return;
-      const rows = [
-        ['Sikiro - Reporte Final'], ['Curso', lastReport.course], ['Tema', lastReport.topic], ['Codigo', lastReport.code],
-        ['Duracion_segundos', lastReport.seconds], ['Alumnos', lastReport.students], ['Comprension_%', lastReport.score], ['Ritmo', lastReport.pace],
-        [], ['Comprension_Entendido', lastReport.seguro], ['Comprension_A_Medias', lastReport.parcial], ['Comprension_Confundido', lastReport.perdido],
-        ['Ritmo_Lento', lastReport.lento], ['Ritmo_Adecuado', lastReport.adecuado], ['Ritmo_Rapido', lastReport.rapido],
-        [], ['Preguntas_Anonimas'], ...lastReport.questions.map((q, i) => [i + 1, q])
-      ];
-      const csv = rows.map((r) => r.map((c) => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+      const r = lastReport;
+      const rows = [];
+      const push = (a) => rows.push(a);
+      push(['SIKIRO - REPORTE FINAL DE CLASE']);
+      push([]);
+      push(['DATOS GENERALES']);
+      push(['Campo', 'Valor']);
+      push(['Curso / Materia', r.course]);
+      push(['Tema', r.topic]);
+      push(['Código de clase', r.code]);
+      push(['Duración (min)', (r.seconds / 60).toFixed(1)]);
+      push(['Alumnos conectados', r.students]);
+      push(['Comprensión global (%)', r.score]);
+      push(['Ritmo predominante', r.pace]);
+      push(['Preguntas anónimas', (r.questions || []).length]);
+      push([]);
+      push(['COMPRESIÓN']);
+      push(['Respuesta', 'Cantidad', 'Porcentaje']);
+      const totC = r.seguro + r.parcial + r.perdido;
+      push(['🟢 Entendido', r.seguro, totC ? Math.round(r.seguro / totC * 100) + '%' : '0%']);
+      push(['🟡 A Medias', r.parcial, totC ? Math.round(r.parcial / totC * 100) + '%' : '0%']);
+      push(['🔴 Confundido', r.perdido, totC ? Math.round(r.perdido / totC * 100) + '%' : '0%']);
+      push(['TOTAL', totC, '100%']);
+      push([]);
+      push(['RITMO']);
+      push(['Ritmo', 'Cantidad', 'Porcentaje']);
+      const totP = r.lento + r.adecuado + r.rapido;
+      push(['🐢 Lento', r.lento, totP ? Math.round(r.lento / totP * 100) + '%' : '0%']);
+      push(['🙂 Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%']);
+      push(['⚡ Rápido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%']);
+      push(['TOTAL', totP, '100%']);
+      push([]);
+      if (Array.isArray(r.checkpoints) && r.checkpoints.length) {
+        push(['COMPRESIÓN POR CHECKPOINT (cada 20 min)']);
+        push(['Checkpoint', 'Minutos', '🟢 Entendido', '🟡 A Medias', '🔴 Confundido', 'Total', 'Comprensión (%)']);
+        r.checkpoints.forEach((e) => {
+          push(['Checkpoint ' + e.cp, ((e.cp - 1) * 20) + '-' + (e.cp * 20), e.seguro, e.parcial, e.perdido, e.total, e.score + '%']);
+        });
+        const valid = r.checkpoints.filter((e) => e.total > 0);
+        if (valid.length >= 2) {
+          const lowest = valid.reduce((a, b) => a.score < b.score ? a : b);
+          const highest = valid.reduce((a, b) => a.score > b.score ? a : b);
+          push([]);
+          push(['Menor comprensión', 'Checkpoint ' + lowest.cp + ' (' + lowest.score + '%)']);
+          push(['Mayor comprensión', 'Checkpoint ' + highest.cp + ' (' + highest.score + '%)']);
+        }
+        push([]);
+      }
+      push(['PREGUNTAS ANÓNIMAS']);
+      push(['#', 'Pregunta']);
+      (r.questions || []).forEach((q, i) => push([i + 1, q]));
+      if (!(r.questions || []).length) push(['(sin preguntas)']);
+
+      const csv = rows.map((row) => row.map((c) => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
       const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
-      const a = document.createElement('a'); a.href = url; a.download = 'sikiro-reporte-' + lastReport.code + '.csv'; a.click(); URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = url; a.download = 'sikiro-reporte-' + r.code + '.csv'; a.click(); URL.revokeObjectURL(url);
     }
     // Respaldo por polling si se pierde un Broadcast (alternativa liviana a Postgres Changes)
     function startStatsPolling() {
