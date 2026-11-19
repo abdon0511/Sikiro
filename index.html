@@ -1526,7 +1526,8 @@
     const SIGNAL_COOLDOWN_MS = 20 * 60 * 1000;
     function signalStorageKey(kind) { return 'sikiro_last_signal_' + (currentClass.id || 'x') + '_' + kind; }
     function setSignalGroupDisabled(kind, disabled) {
-      const group = document.getElementById(kind === 'comprension' ? 'group-comprension' : 'group-ritmo');
+      const groupId = kind === 'comprension' ? 'group-comprension' : kind === 'ritmo' ? 'group-ritmo' : 'group-emocion';
+      const group = document.getElementById(groupId);
       if (!group) return;
       group.querySelectorAll('button').forEach((b) => {
         b.disabled = disabled;
