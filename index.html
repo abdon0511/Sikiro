@@ -1197,7 +1197,12 @@
       const num = (v) => (typeof v === 'number' && Number.isFinite(v)) ? v : 0;
       const sig = s.signals && typeof s.signals === 'object' ? s.signals : s;
       // Si la DB viene en 0 (ej. timing), usar los conteos en vivo del docente como respaldo (solo si es la misma clase)
-      const local = report._keepLocal === false ? { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 } : currentClass.signals;
+      const local = report._keepLocal === false ? { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0, bien: 0, neutral: 0, frustrado: 0, cansado: 0, motivado: 0 } : currentClass.signals;
+      const bien = num(sig.bien) || local.bien;
+      const neutral = num(sig.neutral) || local.neutral;
+      const frustrado = num(sig.frustrado) || local.frustrado;
+      const cansado = num(sig.cansado) || local.cansado;
+      const motivado = num(sig.motivado) || local.motivado;
       let seguro = num(sig.seguro) || local.seguro;
       let parcial = num(sig.parcial) || local.parcial;
       let perdido = num(sig.perdido) || local.perdido;
@@ -1254,11 +1259,6 @@
 
       // Estado emocional
       const emocionBars = document.getElementById('report-emocion-bars');
-      const bien = num(sig.bien) || currentClass.signals.bien;
-      const neutral = num(sig.neutral) || currentClass.signals.neutral;
-      const frustrado = num(sig.frustrado) || currentClass.signals.frustrado;
-      const cansado = num(sig.cansado) || currentClass.signals.cansado;
-      const motivado = num(sig.motivado) || currentClass.signals.motivado;
       const totalE = bien + neutral + frustrado + cansado + motivado;
       if (emocionBars) emocionBars.innerHTML =
         barRow('😊 Bien', bien, totalE, '#22c55e') +
