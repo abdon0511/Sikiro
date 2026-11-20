@@ -1643,7 +1643,39 @@
       if (typeof XLSX !== 'undefined') {
         const ws = XLSX.utils.aoa_to_sheet(rows);
         // Anchos de columna
-        ws['!cols'] = [{ wch: 26 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 16 }];
+        ws['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 18 }];
+        // Estilo: Arial 10, bordes, encabezados en negrita con fondo
+        const border = { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'thin', color: { rgb: '94A3B8' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } };
+        const fontNormal = { name: 'Arial', sz: 10 };
+        const fontBold = { name: 'Arial', sz: 10, bold: true };
+        const fillHeader = { fgColor: { rgb: '1E3A5F' } };
+        const fontHeader = { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+            const cell = ws[addr];
+            const val = String(cell.v || '').trim();
+            // Detectar filas de encabezado de seccion (texto en mayusculas sin numeros)
+            const isSection = val && val === val.toUpperCase() && val.length > 3 && !/^\d/.test(val) && !val.includes('%');
+            const isHeader = (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'campo') ||
+                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'respuesta') ||
+                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'ritmo') ||
+                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'estado') ||
+                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'checkpoint') ||
+                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === '#');
+            if (isSection) {
+              cell.s = { font: fontHeader, fill: fillHeader, border: border, alignment: { horizontal: 'center' } };
+            } else if (isHeader) {
+              cell.s = { font: fontBold, fill: { fgColor: { rgb: 'DBEAFE' } }, border: border };
+            } else {
+              cell.s = { font: fontNormal, border: border };
+            }
+          }
+        }
+        // Altura de filas
+        ws['!rows'] = rows.map(() => ({ hpt: 16 }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
         XLSX.writeFile(wb, 'sikiro-reporte-' + r.code + '.xlsx');
