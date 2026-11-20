@@ -471,7 +471,17 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         <button type="button" onclick="downloadReportCSV()" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition">⬇ Descargar Excel</button>
         <button type="button" onclick="window.print()" class="flex-1 bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-300">🖨 Imprimir / PDF</button>
       </div>
-      <button type="button" id="btn-report-back" onclick="showScreen('teacher-dashboard')" class="w-full bg-brand-green hover:bg-green-700 text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+      <div class="space-y-2 no-print">
+        <label class="block text-xs font-bold text-slate-600">Satisfacción con la clase (1-5)</label>
+        <div class="flex gap-2" id="report-satisfaction">
+          <button type="button" onclick="setSatisfaction(1)" class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm">1</button>
+          <button type="button" onclick="setSatisfaction(2)" class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm">2</button>
+          <button type="button" onclick="setSatisfaction(3)" class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm">3</button>
+          <button type="button" onclick="setSatisfaction(4)" class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm">4</button>
+          <button type="button" onclick="setSatisfaction(5)" class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm">5</button>
+        </div>
+        <textarea id="report-notes" placeholder="Observaciones (opcional)..." class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue resize-none" rows="2"></textarea>
+      </div>
         ➕ Nueva Clase
       </button>
     </section>
@@ -1901,7 +1911,22 @@ C:\Users\Alumno\Documents\Sikiro\index.html
     window.toggleTheme = toggleTheme;
     window.toggleSidebar = toggleSidebar;
     window.sendContactMessage = sendContactMessage;
-    window.teacherRequestFeedback = teacherRequestFeedback;
+    // Satisfacción del docente con la clase
+    let reportSatisfaction = 0;
+    function setSatisfaction(n) {
+      reportSatisfaction = n;
+      const container = document.getElementById('report-satisfaction');
+      if (container) {
+        container.querySelectorAll('button').forEach((b, i) => {
+          if (i + 1 <= n) {
+            b.className = 'w-10 h-10 rounded-full border border-brand-blue bg-brand-blue text-white font-bold text-sm';
+          } else {
+            b.className = 'w-10 h-10 rounded-full border border-slate-200 text-slate-600 font-bold text-sm';
+          }
+        });
+      }
+    }
+    window.setSatisfaction = setSatisfaction;
     window.shareDoubt = shareDoubt;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
