@@ -451,6 +451,17 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         <p id="report-checkpoint-summary" class="text-xs text-slate-500 italic"></p>
       </div>
 
+      <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 no-print">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-display font-bold text-sm text-slate-900">Índice de Salud del Aula</h3>
+          <span id="report-health-index" class="font-display font-extrabold text-2xl text-brand-blue">--</span>
+        </div>
+        <div id="report-health-bar" class="h-3 bg-slate-100 rounded-full overflow-hidden mb-3">
+          <div id="report-health-fill" class="h-full rounded-full bg-brand-blue" style="width:0%"></div>
+        </div>
+        <div id="report-recommendations" class="space-y-2"></div>
+      </div>
+
       <div class="space-y-3 no-print">
         <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas</h3>
         <div id="report-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
@@ -525,8 +536,10 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         </div>
       </div>
 
-      <div class="space-y-2 pt-2">
-        <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Enviar Pregunta Anónima al Profesor</h4>
+      <div id="student-shared-doubts" class="hidden space-y-2 pt-2">
+        <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">💬 Dudas compartidas por el profesor</h4>
+        <div id="student-shared-doubts-list" class="space-y-2"></div>
+      </div>
         <div class="flex gap-2">
           <input type="text" id="student-anonymous-question-input" maxlength="200" placeholder="Escribe tu duda sin revelar tu identidad... (máx. 200)" class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
           <button type="button" id="btn-send-question" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">Enviar</button>
@@ -726,6 +739,19 @@ C:\Users\Alumno\Documents\Sikiro\index.html
             showToast('📋 El profesor solicita tu feedback');
           }
         })
+        .on('broadcast', { event: 'SHARED_DOUBT' }, (payload) => {
+          if (currentRole === 'student' && payload.payload && payload.payload.text) {
+            const container = document.getElementById('student-shared-doubts');
+            const list = document.getElementById('student-shared-doubts-list');
+            if (container && list) {
+              container.classList.remove('hidden');
+              const item = document.createElement('div');
+              item.className = 'rounded-2xl bg-secondary p-3 text-sm';
+              item.innerHTML = '<span class="text-muted-foreground">Un estudiante pregunta:</span><p class="mt-1">' + escapeHtml(payload.payload.text) + '</p>';
+              list.prepend(item);
+            }
+          }
+        })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             // FIX #3: Al (re)conectar, rescatar contadores desde la BD
@@ -750,6 +776,12 @@ C:\Users\Alumno\Documents\Sikiro\index.html
     function broadcastClassStatus(status) {
       if (!liveChannel) return;
       liveChannel.send({ type: 'broadcast', event: 'CLASS_STATUS', payload: { status, feedbackConfig: currentClass.feedbackConfig } });
+    }
+    // El docente comparte una duda anónima con toda la clase
+    function shareDoubt(text) {
+      if (!liveChannel) { showToast('No hay clase activa'); return; }
+      liveChannel.send({ type: 'broadcast', event: 'SHARED_DOUBT', payload: { text } });
+      showToast('💬 Duda compartida con la clase');
     }
     // El docente solicita feedback manualmente a los alumnos
     function teacherRequestFeedback() {
@@ -1370,6 +1402,44 @@ C:\Users\Alumno\Documents\Sikiro\index.html
           }
         }
       }
+      // Indice de salud del aula + recomendaciones
+      const totalP = lento + adecuado + rapido;
+      const ritmoAdecuadoPct = totalP > 0 ? Math.round((adecuado / totalP) * 100) : 100;
+      const negativoPct = totalE > 0 ? Math.round(((frustrado + cansado) / totalE) * 100) : 0;
+      const healthIndex = Math.round(0.5 * score + 0.2 * 100 + 0.15 * ritmoAdecuadoPct + 0.15 * (100 - negativoPct));
+      const healthEl = document.getElementById('report-health-index');
+      const healthFill = document.getElementById('report-health-fill');
+      if (healthEl) healthEl.innerText = healthIndex;
+      if (healthFill) healthFill.style.width = healthIndex + '%';
+      const recs = [];
+      if (totalComp === 0 && totalP === 0 && totalE === 0) {
+        recs.push({ level: 'info', text: 'Sin datos aun: lanza un checkpoint o solicita feedback.' });
+      }
+      if (score < 60 && totalComp > 0) {
+        recs.push({ level: 'critico', text: 'Comprension baja: abre un checkpoint de 3 min y repasa el concepto central.' });
+      }
+      if (rapido > 0 && totalP > 0 && (rapido / totalP * 100) > 55) {
+        recs.push({ level: 'advertencia', text: 'Ritmo percibido acelerado: baja la velocidad y abre 2 min para preguntas.' });
+      }
+      if (lento > 0 && totalP > 0 && (lento / totalP * 100) > 40) {
+        recs.push({ level: 'info', text: 'Algunos sienten el ritmo lento: considera un reto opcional para quienes avanzan mas rapido.' });
+      }
+      if (negativoPct > 30) {
+        recs.push({ level: 'advertencia', text: 'Estado del aula bajo: haz una pausa breve o cambia de dinamica.' });
+      }
+      if (recs.length === 0) {
+        recs.push({ level: 'ok', text: 'Todo va bien: sigue con el plan de clase.' });
+      }
+      const recBox = document.getElementById('report-recommendations');
+      if (recBox) {
+        recBox.innerHTML = recs.map((r) => {
+          const color = r.level === 'critico' ? 'text-rose-700 bg-rose-50 border-rose-200' :
+            r.level === 'advertencia' ? 'text-amber-700 bg-amber-50 border-amber-200' :
+            r.level === 'ok' ? 'text-green-700 bg-green-50 border-green-200' :
+            'text-blue-700 bg-blue-50 border-blue-200';
+          return '<div class="p-3 rounded-xl border text-xs font-medium ' + color + '">' + escapeHtml(r.text) + '</div>';
+        }).join('');
+      }
       const qBox = document.getElementById('report-questions');
       if (qBox) qBox.innerHTML = texts.length === 0
         ? '<p class="text-xs text-slate-400 italic">No hubo preguntas.</p>'
@@ -1793,9 +1863,9 @@ C:\Users\Alumno\Documents\Sikiro\index.html
           questionsContainer.innerHTML = '<p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>';
         } else {
           questionsContainer.innerHTML = currentClass.questions.map(q => `
-            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-800 flex justify-between items-center shadow-sm">
-              <span>"${escapeHtml(q)}"</span>
-              <span class="text-[10px] font-bold text-slate-400 uppercase bg-slate-200 px-2 py-0.5 rounded">Anónimo</span>
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-800 flex justify-between items-center shadow-sm gap-2">
+              <span class="flex-1">"${escapeHtml(q)}"</span>
+              <button type="button" onclick="shareDoubt('${escapeHtml(q).replace(/'/g, "\\\\'")}' )" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Compartir</button>
             </div>
           `).join('');
         }
@@ -1832,6 +1902,7 @@ C:\Users\Alumno\Documents\Sikiro\index.html
     window.toggleSidebar = toggleSidebar;
     window.sendContactMessage = sendContactMessage;
     window.teacherRequestFeedback = teacherRequestFeedback;
+    window.shareDoubt = shareDoubt;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
