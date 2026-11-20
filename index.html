@@ -413,7 +413,10 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         </div>
         <div id="teacher-feedback-controls" class="flex gap-2 pt-2">
           <button type="button" id="btn-request-feedback" onclick="teacherRequestFeedback()" class="flex-1 bg-brand-blue hover:bg-brand-blueHover text-white font-bold text-xs px-4 py-2.5 rounded-full transition shadow-md">
-            📋 Pedir feedback a la clase
+            Pedir feedback a la clase
+          </button>
+          <button type="button" id="btn-send-checkpoint" onclick="teacherSendCheckpoint()" class="flex-1 bg-brand-amber hover:bg-amber-600 text-white font-bold text-xs px-4 py-2.5 rounded-full transition shadow-md">
+            Enviar checkpoint
           </button>
         </div>
       </div>
@@ -771,6 +774,19 @@ C:\Users\Alumno\Documents\Sikiro\index.html
             showToast('📋 El profesor solicita tu feedback');
           }
         })
+        .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
+          if (currentRole === 'student' && payload.payload && payload.payload.question) {
+            const q = payload.payload.question;
+            const opts = payload.payload.options || [];
+            const answer = opts.length > 0
+              ? prompt(q + '\n\nOpciones: ' + opts.join(', '))
+              : prompt(q);
+            if (answer !== null) {
+              if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { answer: answer.trim(), ts: Date.now() } });
+              showToast('Respuesta enviada');
+            }
+          }
+        })
         .on('broadcast', { event: 'SHARED_DOUBT' }, (payload) => {
           if (currentRole === 'student' && payload.payload && payload.payload.text) {
             const container = document.getElementById('student-shared-doubts');
@@ -820,6 +836,17 @@ C:\Users\Alumno\Documents\Sikiro\index.html
       if (!liveChannel) { showToast('No hay clase activa'); return; }
       liveChannel.send({ type: 'broadcast', event: 'FEEDBACK_REQUEST', payload: { ts: Date.now() } });
       showToast('📋 Feedback solicitado a la clase');
+    }
+    // El docente envia un checkpoint con pregunta a los alumnos
+    function teacherSendCheckpoint() {
+      const question = prompt('Escribe la pregunta del checkpoint:');
+      if (!question || !question.trim()) return;
+      const options = prompt('Opciones separadas por coma (dejar vacio para respuesta abierta):');
+      const opts = options ? options.split(',').map((o) => o.trim()).filter(Boolean) : [];
+      const type = opts.length > 0 ? 'multiple' : 'open';
+      if (!liveChannel) { showToast('No hay clase activa'); return; }
+      liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT', payload: { question: question.trim(), type, options: opts, ts: Date.now() } });
+      showToast('Checkpoint enviado a la clase');
     }
 
     // El alumno reacciona al cambio de estado.
@@ -1950,6 +1977,8 @@ C:\Users\Alumno\Documents\Sikiro\index.html
     }
     window.setSatisfaction = setSatisfaction;
     window.shareDoubt = shareDoubt;
+    window.teacherRequestFeedback = teacherRequestFeedback;
+    window.teacherSendCheckpoint = teacherSendCheckpoint;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
