@@ -80,7 +80,8 @@
       body { background: white !important; color: #1e293b !important; }
       main { max-width: 100% !important; padding: 0 !important; }
       section { box-shadow: none !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 20px !important; margin-bottom: 16px !important; }
-      .report-page-break { page-break-before: always; }
+      main { max-width: 100% !important; margin: 0 auto !important; padding: 0 !important; }
+      body { margin: 0 auto !important; }
       h1, h2, h3 { color: #1e293b !important; }
       .bg-slate-50 { background: #f8fafc !important; }
       #report-health-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -435,7 +436,7 @@
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 report-page-break">
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-students" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
           <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos Conectados</span>
         </div>
