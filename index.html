@@ -430,10 +430,14 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         <p id="report-meta" class="text-xs text-slate-500 mt-1">CÓDIGO: ---- · Duración: 00:00</p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center no-print">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center no-print">
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-students" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
-          <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos Conectados</span>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-responded" class="block font-display font-extrabold text-2xl text-brand-green">0</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Respondieron</span>
         </div>
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-comprehension" class="block font-display font-extrabold text-2xl text-brand-amber">100%</span>
@@ -1411,6 +1415,8 @@ C:\Users\Alumno\Documents\Sikiro\index.html
       set('report-course-topic', (report.course && report.topic) ? report.course + ' - ' + report.topic : 'Clase finalizada');
       set('report-meta', 'CÓDIGO: ' + report.code + ' · Duración: ' + mm + ':' + ss);
       set('report-students', students);
+      const responded = seguro + parcial + perdido + lento + adecuado + rapido + bien + neutral + frustrado + cansado + motivado;
+      set('report-responded', responded);
       set('report-comprehension', score + '%');
       set('report-pace', pace);
       set('report-questions-count', texts.length);
