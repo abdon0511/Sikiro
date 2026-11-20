@@ -267,7 +267,43 @@
             <label class="block text-xs font-bold text-slate-600 mb-1">Tema a Estudiar</label>
             <input type="text" id="class-topic" placeholder="Ej. Ecuaciones Cuadráticas" class="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
           </div>
-        </div>
+          <div class="border-t border-slate-200 pt-3 space-y-3">
+            <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">Configuración de Feedback</h4>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">🧠 Comprensión</label>
+              <select id="config-comp" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                <option value="manual">Cuando yo lo solicite</option>
+                <option value="5">Cada 5 minutos</option>
+                <option value="10" selected>Cada 10 minutos</option>
+                <option value="15">Cada 15 minutos</option>
+                <option value="off">Desactivado</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">⚡ Ritmo</label>
+              <select id="config-pace" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                <option value="manual">Cuando yo lo solicite</option>
+                <option value="5">Cada 5 minutos</option>
+                <option value="10" selected>Cada 10 minutos</option>
+                <option value="15">Cada 15 minutos</option>
+                <option value="off">Desactivado</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">😊 Estado emocional</label>
+              <select id="config-mood" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue">
+                <option value="always" selected>Disponible siempre</option>
+                <option value="once">Una vez por clase</option>
+                <option value="off">Desactivado</option>
+              </select>
+            </div>
+          </div>","oldString">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Tema a Estudiar</label>
+            <input type="text" id="class-topic" placeholder="Ej. Ecuaciones Cuadráticas" class="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+          </div>
+        </div>","path">
+C:\Users\Alumno\Documents\Sikiro\index.html
         <button type="button" onclick="createAndStartClass()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
           Crear e Ir a la Clase
         </button>
@@ -368,6 +404,11 @@
         <div id="teacher-anonymous-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1">
           <p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>
         </div>
+        <div id="teacher-feedback-controls" class="flex gap-2 pt-2">
+          <button type="button" id="btn-request-feedback" onclick="teacherRequestFeedback()" class="flex-1 bg-brand-blue hover:bg-brand-blueHover text-white font-bold text-xs px-4 py-2.5 rounded-full transition shadow-md">
+            📋 Pedir feedback a la clase
+          </button>
+        </div>
       </div>
     </section>
 
@@ -456,7 +497,7 @@
         <p id="student-waiting-text" class="text-xs font-bold text-brand-amber">⏸ Clase en pausa. Esperá a que el profesor continúe.</p>
       </div>
 
-      <div class="space-y-2">
+      <div id="section-comprension" class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">🧠 ¿Cómo vas con la explicación?</h4>
         <div id="group-comprension" class="grid grid-cols-3 gap-3">
           <button type="button" onclick="studentSendSignal('comprension', 'seguro')" class="p-3 bg-green-50 hover:bg-green-100 border border-green-200 text-brand-green font-bold text-xs rounded-2xl transition">🟢 Entendido</button>
@@ -465,7 +506,7 @@
         </div>
       </div>
 
-      <div class="space-y-2">
+      <div id="section-ritmo" class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">⚡ Ritmo de la clase</h4>
         <div id="group-ritmo" class="grid grid-cols-3 gap-3">
           <button type="button" onclick="studentSendSignal('ritmo', 'lento')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">🐢 Lento</button>
@@ -473,7 +514,7 @@
           <button type="button" onclick="studentSendSignal('ritmo', 'rapido')" class="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-2xl transition">⚡ Rápido</button>
         </div>
       </div>
-      <div class="space-y-2">
+      <div id="section-emocion" class="space-y-2">
         <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">😊 ¿Cómo te sentís?</h4>
         <div id="group-emocion" class="grid grid-cols-5 gap-2">
           <button type="button" onclick="studentSendSignal('emocion', 'bien')" class="p-2.5 bg-green-50 hover:bg-green-100 border border-green-200 text-brand-green font-bold text-xs rounded-2xl transition">😊 Bien</button>
@@ -526,7 +567,9 @@
       questions: [],
       signals: { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0, bien: 0, neutral: 0, frustrado: 0, cansado: 0, motivado: 0 },
       checkpoints: {},   // { 1: {seguro,parcial,perdido,lento,adecuado,rapido}, ... }
-      currentCheckpoint: 1
+      currentCheckpoint: 1,
+      feedbackConfig: { comp: '10', pace: '10', mood: 'always' },
+      moodUsed: false
     };
 
     // ==========================================
@@ -673,6 +716,14 @@
           // El alumno se entera en vivo cuando el docente inicia/pausa/finaliza
           if (currentRole === 'student' && payload.payload) {
             handleStudentClassStatus(payload.payload.status);
+            if (payload.payload.feedbackConfig) {
+              applyStudentFeedbackConfig(payload.payload.feedbackConfig);
+            }
+          }
+        })
+        .on('broadcast', { event: 'FEEDBACK_REQUEST' }, (payload) => {
+          if (currentRole === 'student') {
+            showToast('📋 El profesor solicita tu feedback');
           }
         })
         .subscribe((status) => {
@@ -698,7 +749,13 @@
     // El docente avisa en vivo el cambio de estado de la clase.
     function broadcastClassStatus(status) {
       if (!liveChannel) return;
-      liveChannel.send({ type: 'broadcast', event: 'CLASS_STATUS', payload: { status } });
+      liveChannel.send({ type: 'broadcast', event: 'CLASS_STATUS', payload: { status, feedbackConfig: currentClass.feedbackConfig } });
+    }
+    // El docente solicita feedback manualmente a los alumnos
+    function teacherRequestFeedback() {
+      if (!liveChannel) { showToast('No hay clase activa'); return; }
+      liveChannel.send({ type: 'broadcast', event: 'FEEDBACK_REQUEST', payload: { ts: Date.now() } });
+      showToast('📋 Feedback solicitado a la clase');
     }
 
     // El alumno reacciona al cambio de estado.
@@ -723,6 +780,17 @@
         // Dar tiempo a leer el cartel antes de sacar al alumno
         setTimeout(() => studentLeaveClass(), 2500);
       }
+    }
+    // Aplicar configuración de feedback en la vista del estudiante
+    function applyStudentFeedbackConfig(cfg) {
+      if (!cfg) return;
+      window._studentFeedbackConfig = cfg;
+      const secComp = document.getElementById('section-comprension');
+      const secRitmo = document.getElementById('section-ritmo');
+      const secEmocion = document.getElementById('section-emocion');
+      if (secComp) secComp.classList.toggle('hidden', cfg.comp === 'off');
+      if (secRitmo) secRitmo.classList.toggle('hidden', cfg.pace === 'off');
+      if (secEmocion) secEmocion.classList.toggle('hidden', cfg.mood === 'off');
     }
 
     // Intento de avisar al docente si el alumno cierra/recarga la pestaña.
@@ -1077,6 +1145,16 @@
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
       currentClass.checkpoints = {};
       currentClass.currentCheckpoint = 1;
+      // Configuración de feedback
+      const compSel = document.getElementById('config-comp');
+      const paceSel = document.getElementById('config-pace');
+      const moodSel = document.getElementById('config-mood');
+      currentClass.feedbackConfig = {
+        comp: compSel ? compSel.value : '10',
+        pace: paceSel ? paceSel.value : '10',
+        mood: moodSel ? moodSel.value : 'always'
+      };
+      currentClass.moodUsed = false;
       const topicElem = document.getElementById('display-course-topic');
       const codeElem = document.getElementById('display-class-code');
       if (topicElem) topicElem.innerText = `${course} - ${topic}`;
@@ -1579,6 +1657,14 @@
         liveChannel.send({ type: 'broadcast', event: 'STUDENT_SIGNAL', payload: { kind, val, checkpoint: cp } });
       }
       showToast('✓ Respuesta registrada');
+      // Si el estado emocional es "una vez", ocultar la sección después de usar
+      if (kind === 'emocion') {
+        const cfg = window._studentFeedbackConfig;
+        if (cfg && cfg.mood === 'once') {
+          const sec = document.getElementById('section-emocion');
+          if (sec) sec.classList.add('hidden');
+        }
+      }
     }
 
     // Listado simple de palabras prohibidas (minúsculas, sin acentos especiales)
@@ -1745,6 +1831,7 @@
     window.toggleTheme = toggleTheme;
     window.toggleSidebar = toggleSidebar;
     window.sendContactMessage = sendContactMessage;
+    window.teacherRequestFeedback = teacherRequestFeedback;
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
