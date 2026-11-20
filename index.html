@@ -404,8 +404,10 @@ C:\Users\Alumno\Documents\Sikiro\index.html
         <span class="text-slate-300">·</span>
         <span id="stat-unresponded">Sin responder: 0</span>
       </div>
-      <div class="space-y-3 pt-2">
-        <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas de los Alumnos</h3>
+      <div id="teacher-roster" class="hidden space-y-2 pt-2">
+        <h3 class="font-display font-bold text-sm text-slate-900">Estudiantes Conectados</h3>
+        <div id="teacher-roster-list" class="space-y-1 max-h-40 overflow-y-auto"></div>
+      </div>
         <div id="teacher-anonymous-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1">
           <p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>
         </div>
@@ -715,6 +717,21 @@ C:\Users\Alumno\Documents\Sikiro\index.html
           else if (count < prevPresenceCount) showToast('🎓 Un alumno se ha ido.');
           prevPresenceCount = count;
           currentClass.studentsCount = count;
+          // Actualizar roster de estudiantes conectados
+          const rosterList = document.getElementById('teacher-roster-list');
+          const rosterBox = document.getElementById('teacher-roster');
+          if (rosterList && rosterBox) {
+            const users = Object.values(state).flat();
+            if (users.length > 0) {
+              rosterBox.classList.remove('hidden');
+              rosterList.innerHTML = users.map((u, i) => {
+                const name = u.user_id || ('Alumno ' + (i + 1));
+                return '<div class="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><span class="w-2 h-2 rounded-full bg-brand-green"></span><span class="font-medium text-slate-700">' + escapeHtml(name) + '</span></div>';
+              }).join('');
+            } else {
+              rosterBox.classList.add('hidden');
+            }
+          }
           updateTeacherLiveStats();
         })
         .on('broadcast', { event: 'STUDENT_SIGNAL' }, (payload) => {
