@@ -56,6 +56,7 @@
     /* Dashboard cards */
     section { transition: background-color .25s, border-color .25s; }
     #screen-role-selector button, section { box-shadow: 0 8px 30px rgba(30,64,175,.06); }
+    #sidebar.hidden, #sidebar-backdrop.hidden { display: none !important; }
 
     /* ===== MODO OSCURO (dashboard) ===== */
     html[data-theme="dark"] body { background-color: #0b1220 !important; background-image: radial-gradient(rgba(56,189,248,.18) 0.75px, transparent 0.75px); color: #e2e8f0 !important; }
@@ -582,6 +583,9 @@
   </div><!-- /layout con sidebar -->
   <script>
 
+      // Limpiar backdrop del sidebar si quedo pegado
+      const _bd = document.getElementById('sidebar-backdrop');
+      if (_bd) _bd.remove();
       // CREDENCIALES DE SUPABASE
     const SUPABASE_URL = 'https://wharxaqqlbgosvbscyeo.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_w_uyO6AU4LlkdHCUX5Oe8g_XACmXsxY';
