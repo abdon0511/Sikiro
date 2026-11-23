@@ -101,7 +101,7 @@
 
   <div class="flex min-h-screen w-full">
   <!-- BARRA LATERAL tipo Supabase -->
-  <aside id="sidebar" class="hidden flex-col w-64 bg-[#0b1220] text-slate-300 h-screen fixed top-0 left-0 border-r border-[#26334d] z-50 shadow-2xl">
+  <aside id="sidebar" class="hidden flex-col w-64 bg-[#0b1220] text-slate-300 h-screen sticky top-0 border-r border-[#26334d] z-40 shadow-2xl">
     <div class="p-5 border-b border-[#26334d]">
       <div class="flex items-center gap-2 cursor-pointer">
         <img src="logo.png" alt="Sikiro" class="h-8 w-auto" onerror="this.style.display='none'" />
@@ -1370,11 +1370,6 @@
 
       showToast('Clase finalizada. Informe guardado.');
 
-      // Cerrar sidebar y backdrop para que el reporte se vea completo
-      const _sb2 = document.getElementById('sidebar');
-      if (_sb2) { _sb2.classList.add('hidden'); _sb2.classList.remove('flex'); }
-      const _bd2 = document.getElementById('sidebar-backdrop');
-      if (_bd2) _bd2.classList.add('hidden');
       showTeacherReport(reportData);
       showScreen('teacher-report');
       currentClass.id = null;
@@ -1576,11 +1571,6 @@
       // Usar los conteos locales solo si coinciden con esta clase
       const keepLocal = currentClass.id === id;
       showTeacherReport({ course, topic, code, seconds, stats: data, _keepLocal: keepLocal, fromFinish: false });
-      // Cerrar sidebar y backdrop para que el reporte se vea centrado
-      const _sb = document.getElementById('sidebar');
-      if (_sb) { _sb.classList.add('hidden'); _sb.classList.remove('flex'); }
-      const _bd = document.getElementById('sidebar-backdrop');
-      if (_bd) _bd.classList.add('hidden');
       showScreen('teacher-report');
     }
     function resumeClass(id, code, course, topic, status) {
