@@ -101,7 +101,7 @@
 
   <div class="min-h-screen w-full">
   <!-- BARRA LATERAL tipo Supabase -->
-  <aside id="sidebar" class="hidden flex-col w-full max-w-64 bg-[#0b1220] text-slate-300 border border-[#26334d] rounded-2xl shadow-2xl mx-auto my-4">
+  <aside id="sidebar" class="hidden flex-col w-full max-w-64 bg-[#0b1220] text-slate-300 border border-[#26334d] rounded-2xl shadow-2xl mx-auto my-4 relative z-50">
     <div class="p-5 border-b border-[#26334d]">
       <div class="flex items-center gap-2 cursor-pointer">
         <img src="logo.png" alt="Sikiro" class="h-8 w-auto" onerror="this.style.display='none'" />
@@ -927,22 +927,8 @@
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
       if (!sb) return;
-      const open = sb.classList.contains('hidden');
-      sb.classList.toggle('hidden', !open);
-      sb.classList.toggle('flex', open);
-      let bd = document.getElementById('sidebar-backdrop');
-      if (open) {
-        if (!bd) {
-          bd = document.createElement('div');
-          bd.id = 'sidebar-backdrop';
-          bd.className = 'fixed inset-0 bg-black/40 z-40';
-          bd.onclick = toggleSidebar;
-          document.body.appendChild(bd);
-        }
-        bd.classList.remove('hidden');
-      } else if (bd) {
-        bd.classList.add('hidden');
-      }
+      sb.classList.toggle('hidden');
+      sb.classList.toggle('flex');
     }
     // Sidebar: se abre solo al presionar ☰. refreshSidebarVisibility solo filtra las secciones por rol.
     function refreshSidebarVisibility() {
