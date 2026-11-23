@@ -942,10 +942,16 @@
     }
     // Sidebar: se abre solo al presionar ☰. refreshSidebarVisibility solo filtra las secciones por rol.
     function refreshSidebarVisibility() {
+      const sb = document.getElementById('sidebar');
       const generalNav = document.getElementById('sidebar-general-nav');
       const teacherNav = document.getElementById('sidebar-teacher-nav');
       const studentNav = document.getElementById('sidebar-student-nav');
       const role = teacherProfile ? teacherProfile.role : null;
+      // Si el sidebar esta oculto, asegurar que el backdrop tambien lo este
+      if (sb && sb.classList.contains('hidden')) {
+        const bd = document.getElementById('sidebar-backdrop');
+        if (bd) bd.classList.add('hidden');
+      }
       if (generalNav) generalNav.classList.toggle('hidden', !!role);
       if (teacherNav) teacherNav.classList.toggle('hidden', role !== 'teacher');
       if (studentNav) studentNav.classList.toggle('hidden', role !== 'student');
