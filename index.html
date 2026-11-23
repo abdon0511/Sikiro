@@ -317,9 +317,18 @@
     </section>
 
     <!-- PANTALLA 4b: MIS CLASES (interfaz separada) -->
-    <section id="screen-teacher-classes" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-lg mx-auto">
+    <section id="screen-teacher-classes" class="hidden bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6 max-w-2xl mx-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-4">
         <h2 class="font-display font-bold text-xl text-slate-900">Mis Clases</h2>
+        <button type="button" onclick="loadMyClasses()" class="text-xs font-bold text-brand-blue hover:underline">↻ Actualizar</button>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" id="classes-search" placeholder="Buscar por curso o tema..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" oninput="filterClasses()" />
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="setClassFilter('all')" id="filter-all" class="px-3 py-1.5 text-xs font-bold rounded-full bg-brand-blue text-white">Todas</button>
+        <button type="button" onclick="setClassFilter('finished')" id="filter-finished" class="px-3 py-1.5 text-xs font-bold rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">Finalizadas</button>
+        <button type="button" onclick="setClassFilter('active')" id="filter-active" class="px-3 py-1.5 text-xs font-bold rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">Activas</button>
       </div>
       <div id="teacher-classes-list" class="space-y-3">
         <p class="text-xs text-slate-400 italic">Cargando…</p>
@@ -602,6 +611,8 @@
     let prevPresenceCount = 0; // para avisar solo cuando cambia el conteo
     let lastQuestionAt = 0; // cooldown anti-spam en el front (15s)
 
+    let allMyClasses = [];
+    let classFilter = 'all';
     let currentClass = {
       id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
       course: '',
@@ -1529,6 +1540,51 @@
 
     // ===== OPCIONALES =====
     // Lista de clases del docente + reanudar (tras recargar)
+    function setClassFilter(f) {
+      classFilter = f;
+      ['all', 'finished', 'active'].forEach((k) => {
+        const btn = document.getElementById('filter-' + k);
+        if (btn) {
+          btn.className = k === f
+            ? 'px-3 py-1.5 text-xs font-bold rounded-full bg-brand-blue text-white'
+            : 'px-3 py-1.5 text-xs font-bold rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200';
+        }
+      });
+      filterClasses();
+    }
+    function filterClasses() {
+      const box = document.getElementById('teacher-classes-list');
+      if (!box) return;
+      const search = (document.getElementById('classes-search')?.value || '').toLowerCase().trim();
+      let rows = allMyClasses.slice();
+      if (classFilter !== 'all') {
+        rows = rows.filter((r) => classFilter === 'finished' ? r.status === 'finished' : r.status !== 'finished');
+      }
+      if (search) {
+        rows = rows.filter((r) => (r.course || '').toLowerCase().includes(search) || (r.topic || '').toLowerCase().includes(search) || (r.code || '').toLowerCase().includes(search));
+      }
+      if (!rows.length) {
+        box.innerHTML = '<p class="text-xs text-slate-400 italic">No se encontraron clases.</p>';
+        return;
+      }
+      box.innerHTML = rows.map((r) => {
+        const done = r.status === 'finished';
+        const args = '\'' + r.class_id + '\',\'' + escapeHtml(r.code) + '\',\'' + escapeHtml(r.course).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.topic).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.status) + '\',\'' + (r.created_at || '') + '\',\'' + (r.finished_at || '') + '\''';
+        const btn = done
+          ? '<button type="button" onclick="viewReportClass(' + args + ')" class="shrink-0 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Ver Reporte</button>'
+          : '<button type="button" onclick="resumeClass(' + args + ')" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Reanudar</button>';
+        const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+        return '<div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2 hover:shadow-md transition">' +
+          '<div class="flex items-center justify-between gap-2">' +
+            '<div class="min-w-0 flex-1">' +
+              '<p class="text-sm font-bold text-slate-800 truncate">' + escapeHtml(r.course) + ' - ' + escapeHtml(r.topic) + '</p>' +
+              '<p class="text-[10px] text-slate-400 font-mono mt-0.5">' + escapeHtml(r.code) + ' · ' + escapeHtml(r.status) + (dateStr ? ' · ' + dateStr : '') + '</p>' +
+            '</div>' +
+            btn +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
     async function loadMyClasses() {
       const box = document.getElementById('teacher-classes-list');
       if (!box || !supabaseClient) return;
@@ -1536,18 +1592,12 @@
       const { data, error } = await supabaseClient.rpc('list_sikiro_classes');
       if (error) { box.innerHTML = '<p class="text-xs text-rose-500">No se pudo cargar: ' + escapeHtml(error.message) + '</p>'; return; }
       const rows = Array.isArray(data) ? data : [];
+      allMyClasses = rows;
       if (!rows.length) { box.innerHTML = '<p class="text-xs text-slate-400 italic">Todavía no creaste clases.</p>'; return; }
-      box.innerHTML = rows.map((r) => {
-        const done = r.status === 'finished';
-        const args = '\'' + r.class_id + '\',\'' + escapeHtml(r.code) + '\',\'' + escapeHtml(r.course).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.topic).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.status) + '\',\'' + (r.created_at || '') + '\',\'' + (r.finished_at || '') + '\'';
-        const btn = done
-          ? '<button type="button" onclick="viewReportClass(' + args + ')" class="shrink-0 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Ver Reporte</button>'
-          : '<button type="button" onclick="resumeClass(' + args + ')" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Reanudar</button>';
-        return '<div class="flex items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-xl"><div class="min-w-0"><p class="text-xs font-bold text-slate-800 truncate">' + escapeHtml(r.course) + ' - ' + escapeHtml(r.topic) + '</p><p class="text-[10px] text-slate-400 font-mono">' + escapeHtml(r.code) + ' · ' + escapeHtml(r.status) + '</p></div>' + btn + '</div>';
-      }).join('');
+      filterClasses();
     }
-    // Ver/descargar el reporte de una clase YA finalizada, sin reabrirla
-    async function viewReportClass(id, code, course, topic, status, createdAt, finishedAt) {
+
+    function viewReportClass(id, code, course, topic, status, createdAt, finishedAt) {
       showToast('Cargando reporte...');
       const { data, error } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: id });
       if (error) { showToast('Error: ' + error.message); return; }
@@ -2028,6 +2078,8 @@
     window.downloadReportCSV = downloadReportCSV;
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
+    window.setClassFilter = setClassFilter;
+    window.filterClasses = filterClasses;
     </script>
 </body>
 </html>
