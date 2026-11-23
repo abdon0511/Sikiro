@@ -112,20 +112,20 @@
     <nav class="flex-1 p-3 space-y-1 text-xs font-semibold overflow-y-auto">
       <div id="sidebar-general-nav">
         <p class="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">General</p>
-        <button type="button" onclick="showScreen('role-selector')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🏠 Inicio</button>
+        <button type="button" onclick="showScreen('role-selector'); toggleSidebar()" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🏠 Inicio</button>
       </div>
       <div id="sidebar-teacher-nav">
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Docente</p>
-        <button type="button" onclick="showScreen('teacher-dashboard')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">➕ Crear Clase</button>
-        <button type="button" onclick="showScreen('teacher-classes')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📚 Mis Clases / Reportes</button>
+        <button type="button" onclick="showScreen('teacher-dashboard'); toggleSidebar()" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">➕ Crear Clase</button>
+        <button type="button" onclick="showScreen('teacher-classes'); toggleSidebar()" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">📚 Mis Clases / Reportes</button>
       </div>
       <div id="sidebar-student-nav">
         <p class="px-2 pt-4 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Alumno</p>
-        <button type="button" onclick="showScreen('student-join')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🎓 Ingresar a Clase</button>
+        <button type="button" onclick="showScreen('student-join'); toggleSidebar()" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition">🎓 Ingresar a Clase</button>
       </div>
       <div id="sidebar-contact-nav" class="pt-4 space-y-2">
         <p class="px-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500">Contáctanos</p>
-        <button type="button" onclick="showScreen('contact')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">📝 Enviar mensaje</button>
+        <button type="button" onclick="showScreen('contact'); toggleSidebar()" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-white/5 hover:text-white transition text-[11px]">📝 Enviar mensaje</button>
       </div>
     </nav>
     <!-- REDES: cambiá los href por las cuentas reales (buscá REDES en el código) -->
