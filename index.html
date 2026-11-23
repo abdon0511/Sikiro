@@ -13,6 +13,7 @@
 
   <!-- SheetJS para exportar a Excel (.xlsx) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4/dist/exceljs.min.js"></script>
 
   <!-- Tipografías: Sora (Display) e Inter (Cuerpo) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1572,120 +1573,125 @@
       connectToLiveRoom(code); updateTeacherLiveStats(); persistActiveClass(); startStatsPolling(); showScreen('teacher-live-class');
     }
     // Exportar reporte CSV
-    function downloadReportCSV() {
+    async function downloadReportCSV() {
       if (!lastReport) return;
       const r = lastReport;
-      const rows = [];
-      const push = (a) => rows.push(a);
-      const W = 7; // ancho fijo del cuadro (7 columnas)
-      const pad = (a) => { const out = a.slice(); while (out.length < W) out.push(''); return out; };
 
-      push(pad(['SIKIRO - REPORTE FINAL DE CLASE', '', '', '', '', '', '']));
-      push(pad(['']));
-      push(pad(['DATOS GENERALES', '', '', '', '', '', '']));
-      push(pad(['Campo', 'Valor', '', '', '', '', '']));
-      push(pad(['Curso / Materia', r.course, '', '', '', '', '']));
-      push(pad(['Tema', r.topic, '', '', '', '', '']));
-      push(pad(['Código de clase', r.code, '', '', '', '', '']));
-      push(pad(['Duración (min)', (r.seconds / 60).toFixed(1), '', '', '', '', '']));
-      push(pad(['Alumnos conectados', r.students, '', '', '', '', '']));
-      push(pad(['Comprensión global (%)', r.score, '', '', '', '', '']));
-      push(pad(['Ritmo predominante', r.pace, '', '', '', '', '']));
-      push(pad(['Preguntas anónimas', (r.questions || []).length, '', '', '', '', '']));
-      push(pad(['']));
-      push(pad(['COMPRESIÓN', '', '', '', '', '', '']));
-      push(pad(['Respuesta', 'Cantidad', 'Porcentaje', '', '', '', '']));
-      const totC = r.seguro + r.parcial + r.perdido;
-      push(pad(['🟢 Entendido', r.seguro, totC ? Math.round(r.seguro / totC * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['🟡 A Medias', r.parcial, totC ? Math.round(r.parcial / totC * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['🔴 Confundido', r.perdido, totC ? Math.round(r.perdido / totC * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['TOTAL', totC, '100%', '', '', '', '']));
-      push(pad(['']));
-      push(pad(['RITMO', '', '', '', '', '', '']));
-      push(pad(['Ritmo', 'Cantidad', 'Porcentaje', '', '', '', '']));
-      const totP = r.lento + r.adecuado + r.rapido;
-      push(pad(['🐢 Lento', r.lento, totP ? Math.round(r.lento / totP * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['🙂 Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['⚡ Rápido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%', '', '', '', '']));
-      push(pad(['TOTAL', totP, '100%', '', '', '', '']));
-      push(pad(['']));
-      push(pad(['ESTADO EMOCIONAL', '', '', '', '', '', '']));
-      push(pad(['Estado', 'Cantidad', 'Porcentaje', '', '', '', '']));
-      const totE = (r.bien||0)+(r.neutral||0)+(r.frustrado||0)+(r.cansado||0)+(r.motivado||0);
-      push(pad(['😊 Bien', r.bien||0, totE ? Math.round((r.bien||0)/totE*100)+'%' : '0%', '', '', '', '']));
-      push(pad(['😐 Neutral', r.neutral||0, totE ? Math.round((r.neutral||0)/totE*100)+'%' : '0%', '', '', '', '']));
-      push(pad(['😤 Frustrado', r.frustrado||0, totE ? Math.round((r.frustrado||0)/totE*100)+'%' : '0%', '', '', '', '']));
-      push(pad(['😴 Cansado', r.cansado||0, totE ? Math.round((r.cansado||0)/totE*100)+'%' : '0%', '', '', '', '']));
-      push(pad(['🔥 Motivado', r.motivado||0, totE ? Math.round((r.motivado||0)/totE*100)+'%' : '0%', '', '', '', '']));
-      push(pad(['TOTAL', totE, '100%', '', '', '', '']));
-      push(pad(['']));
-      if (Array.isArray(r.checkpoints) && r.checkpoints.length) {
-        push(pad(['COMPRESIÓN POR CHECKPOINT (cada 20 min)', '', '', '', '', '', '']));
-        push(pad(['Checkpoint', 'Minutos', '🟢 Entendido', '🟡 A Medias', '🔴 Confundido', 'Total', 'Comprensión (%)']));
-        r.checkpoints.forEach((e) => {
-          push(pad(['Checkpoint ' + e.cp, ((e.cp - 1) * 20) + '-' + (e.cp * 20), e.seguro, e.parcial, e.perdido, e.total, e.score + '%']));
-        });
-        const valid = r.checkpoints.filter((e) => e.total > 0);
-        if (valid.length >= 2) {
-          const lowest = valid.reduce((a, b) => a.score < b.score ? a : b);
-          const highest = valid.reduce((a, b) => a.score > b.score ? a : b);
-          push(pad(['']));
-          push(pad(['Menor comprensión', 'Checkpoint ' + lowest.cp + ' (' + lowest.score + '%)', '', '', '', '', '']));
-          push(pad(['Mayor comprensión', 'Checkpoint ' + highest.cp + ' (' + highest.score + '%)', '', '', '', '', '']));
+      if (typeof ExcelJS !== 'undefined') {
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Reporte');
+        ws.columns = [
+          { width: 30 }, { width: 24 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 10 }, { width: 18 }
+        ];
+        const border = { top: { style: 'thin', color: { argb: 'FF94A3B8' } }, left: { style: 'thin', color: { argb: 'FF94A3B8' } }, bottom: { style: 'thin', color: { argb: 'FF94A3B8' } }, right: { style: 'thin', color: { argb: 'FF94A3B8' } } };
+        const fontNormal = { name: 'Arial', size: 10 };
+        const fontBold = { name: 'Arial', size: 10, bold: true };
+        const fontHeader = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+        const fillSubHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+
+        function addRow(values, style) {
+          const row = ws.addRow(values);
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.font = fontNormal;
+            cell.border = border;
+            if (style === 'section') { cell.font = fontHeader; cell.fill = fillHeader; cell.alignment = { horizontal: 'center' }; }
+            if (style === 'header') { cell.font = fontBold; cell.fill = fillSubHeader; }
+          });
+          row.height = 16;
+          return row;
         }
-        push(pad(['']));
-      }
-      push(pad(['PREGUNTAS ANÓNIMAS', '', '', '', '', '', '']));
-      push(pad(['#', 'Pregunta', '', '', '', '', '']));
-      (r.questions || []).forEach((q, i) => push(pad([i + 1, q, '', '', '', '', ''])));
-      if (!(r.questions || []).length) push(pad(['(sin preguntas)', '', '', '', '', '', '']));
 
-      if (typeof XLSX !== 'undefined') {
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        // Anchos de columna
-        ws['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 18 }];
-        // Estilo: Arial 10, bordes, encabezados en negrita con fondo
-        const border = { top: { style: 'thin', color: { rgb: '94A3B8' } }, bottom: { style: 'thin', color: { rgb: '94A3B8' } }, left: { style: 'thin', color: { rgb: '94A3B8' } }, right: { style: 'thin', color: { rgb: '94A3B8' } } };
-        const fontNormal = { name: 'Arial', sz: 10 };
-        const fontBold = { name: 'Arial', sz: 10, bold: true };
-        const fillHeader = { fgColor: { rgb: '1E3A5F' } };
-        const fontHeader = { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          for (let C = range.s.c; C <= range.e.c; C++) {
-            const addr = XLSX.utils.encode_cell({ r: R, c: C });
-            if (!ws[addr]) ws[addr] = { t: 's', v: '' };
-            const cell = ws[addr];
-            const val = String(cell.v || '').trim();
-            // Detectar filas de encabezado de seccion (texto en mayusculas sin numeros)
-            const isSection = val && val === val.toUpperCase() && val.length > 3 && !/^\d/.test(val) && !val.includes('%');
-            const isHeader = (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'campo') ||
-                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'respuesta') ||
-                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'ritmo') ||
-                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'estado') ||
-                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === 'checkpoint') ||
-                             (R > 0 && rows[R] && rows[R][0] && String(rows[R][0]).trim().toLowerCase() === '#');
-            if (isSection) {
-              cell.s = { font: fontHeader, fill: fillHeader, border: border, alignment: { horizontal: 'center' } };
-            } else if (isHeader) {
-              cell.s = { font: fontBold, fill: { fgColor: { rgb: 'DBEAFE' } }, border: border };
-            } else {
-              cell.s = { font: fontNormal, border: border };
-            }
+        const totC = r.seguro + r.parcial + r.perdido;
+        const totP = r.lento + r.adecuado + r.rapido;
+        const totE = (r.bien||0)+(r.neutral||0)+(r.frustrado||0)+(r.cansado||0)+(r.motivado||0);
+        const responded = totC + totP + totE;
+
+        addRow(['SIKIRO - REPORTE FINAL DE CLASE', '', '', '', '', '', ''], 'section');
+        addRow(['', '', '', '', '', '', '']);
+        addRow(['DATOS GENERALES', '', '', '', '', '', ''], 'section');
+        addRow(['Campo', 'Valor', '', '', '', '', ''], 'header');
+        addRow(['Curso / Materia', r.course, '', '', '', '', '']);
+        addRow(['Tema', r.topic, '', '', '', '', '']);
+        addRow(['Codigo de clase', r.code, '', '', '', '', '']);
+        addRow(['Duracion (min)', (r.seconds / 60).toFixed(1), '', '', '', '', '']);
+        addRow(['Alumnos conectados', r.students, '', '', '', '', '']);
+        addRow(['Respondieron', responded, '', '', '', '', '']);
+        addRow(['Comprension global (%)', r.score, '', '', '', '', '']);
+        addRow(['Ritmo predominante', r.pace, '', '', '', '', '']);
+        addRow(['Preguntas anonimas', (r.questions || []).length, '', '', '', '', '']);
+        addRow(['', '', '', '', '', '', '']);
+        addRow(['COMPRESION', '', '', '', '', '', ''], 'section');
+        addRow(['Respuesta', 'Cantidad', 'Porcentaje', '', '', '', ''], 'header');
+        addRow(['Entendido', r.seguro, totC ? Math.round(r.seguro / totC * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['A Medias', r.parcial, totC ? Math.round(r.parcial / totC * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['Confundido', r.perdido, totC ? Math.round(r.perdido / totC * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['TOTAL', totC, '100%', '', '', '', '']);
+        addRow(['', '', '', '', '', '', '']);
+        addRow(['RITMO', '', '', '', '', '', ''], 'section');
+        addRow(['Ritmo', 'Cantidad', 'Porcentaje', '', '', '', ''], 'header');
+        addRow(['Lento', r.lento, totP ? Math.round(r.lento / totP * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['Adecuado', r.adecuado, totP ? Math.round(r.adecuado / totP * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['Rapido', r.rapido, totP ? Math.round(r.rapido / totP * 100) + '%' : '0%', '', '', '', '']);
+        addRow(['TOTAL', totP, '100%', '', '', '', '']);
+        addRow(['', '', '', '', '', '', '']);
+        addRow(['ESTADO EMOCIONAL', '', '', '', '', '', ''], 'section');
+        addRow(['Estado', 'Cantidad', 'Porcentaje', '', '', '', ''], 'header');
+        addRow(['Bien', r.bien||0, totE ? Math.round((r.bien||0)/totE*100)+'%' : '0%', '', '', '', '']);
+        addRow(['Neutral', r.neutral||0, totE ? Math.round((r.neutral||0)/totE*100)+'%' : '0%', '', '', '', '']);
+        addRow(['Frustrado', r.frustrado||0, totE ? Math.round((r.frustrado||0)/totE*100)+'%' : '0%', '', '', '', '']);
+        addRow(['Cansado', r.cansado||0, totE ? Math.round((r.cansado||0)/totE*100)+'%' : '0%', '', '', '', '']);
+        addRow(['Motivado', r.motivado||0, totE ? Math.round((r.motivado||0)/totE*100)+'%' : '0%', '', '', '', '']);
+        addRow(['TOTAL', totE, '100%', '', '', '', '']);
+        addRow(['', '', '', '', '', '', '']);
+        if (Array.isArray(r.checkpoints) && r.checkpoints.length) {
+          addRow(['COMPRESION POR CHECKPOINT (cada 20 min)', '', '', '', '', '', ''], 'section');
+          addRow(['Checkpoint', 'Minutos', 'Entendido', 'A Medias', 'Confundido', 'Total', 'Comprension (%)'], 'header');
+          r.checkpoints.forEach((e) => {
+            addRow(['Checkpoint ' + e.cp, ((e.cp - 1) * 20) + '-' + (e.cp * 20), e.seguro, e.parcial, e.perdido, e.total, e.score + '%']);
+          });
+          const valid = r.checkpoints.filter((e) => e.total > 0);
+          if (valid.length >= 2) {
+            const lowest = valid.reduce((a, b) => a.score < b.score ? a : b);
+            const highest = valid.reduce((a, b) => a.score > b.score ? a : b);
+            addRow(['', '', '', '', '', '', '']);
+            addRow(['Menor comprension', 'Checkpoint ' + lowest.cp + ' (' + lowest.score + '%)', '', '', '', '', '']);
+            addRow(['Mayor comprension', 'Checkpoint ' + highest.cp + ' (' + highest.score + '%)', '', '', '', '', '']);
           }
+          addRow(['', '', '', '', '', '', '']);
         }
-        // Altura de filas
-        ws['!rows'] = rows.map(() => ({ hpt: 16 }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
-        XLSX.writeFile(wb, 'sikiro-reporte-' + r.code + '.xlsx');
+        addRow(['PREGUNTAS ANONIMAS', '', '', '', '', '', ''], 'section');
+        addRow(['#', 'Pregunta', '', '', '', '', ''], 'header');
+        (r.questions || []).forEach((q, i) => addRow([i + 1, q, '', '', '', '', '']));
+        if (!(r.questions || []).length) addRow(['(sin preguntas)', '', '', '', '', '', '']);
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'sikiro-reporte-' + r.code + '.xlsx'; a.click(); URL.revokeObjectURL(url);
       } else {
+        // Fallback CSV
+        const rows = [];
+        const push = (a) => rows.push(a);
+        const W = 7;
+        const pad = (a) => { const out = a.slice(); while (out.length < W) out.push(''); return out; };
+        push(pad(['SIKIRO - REPORTE FINAL DE CLASE', '', '', '', '', '', '']));
+        push(pad(['']));
+        push(pad(['DATOS GENERALES', '', '', '', '', '', '']));
+        push(pad(['Campo', 'Valor', '', '', '', '', '']));
+        push(pad(['Curso / Materia', r.course, '', '', '', '', '']));
+        push(pad(['Tema', r.topic, '', '', '', '', '']));
+        push(pad(['Codigo de clase', r.code, '', '', '', '', '']));
+        push(pad(['Duracion (min)', (r.seconds / 60).toFixed(1), '', '', '', '', '']));
+        push(pad(['Alumnos conectados', r.students, '', '', '', '', '']));
+        push(pad(['Comprension global (%)', r.score, '', '', '', '', '']));
+        push(pad(['Ritmo predominante', r.pace, '', '', '', '', '']));
+        push(pad(['Preguntas anonimas', (r.questions || []).length, '', '', '', '', '']));
         const csv = rows.map((row) => row.map((c) => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
         const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
         const a = document.createElement('a'); a.href = url; a.download = 'sikiro-reporte-' + r.code + '.csv'; a.click(); URL.revokeObjectURL(url);
       }
-    }
-    // Respaldo por polling si se pierde un Broadcast (alternativa liviana a Postgres Changes)
+    }/ Respaldo por polling si se pierde un Broadcast (alternativa liviana a Postgres Changes)
     function startStatsPolling() {
       stopStatsPolling();
       statsPollInterval = setInterval(() => { if (currentRole === 'teacher' && currentClass.id) hydrateFromStats(); }, 15000);
