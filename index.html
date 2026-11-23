@@ -1569,7 +1569,7 @@
       }
       box.innerHTML = rows.map((r) => {
         const done = r.status === 'finished';
-        const args = '\'' + r.class_id + '\',\'' + escapeHtml(r.code) + '\',\'' + escapeHtml(r.course).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.topic).replace(/'/g, "\\'") + '\',\'' + escapeHtml(r.status) + '\',\'' + (r.created_at || '') + '\',\'' + (r.finished_at || '') + '\''';
+        const args = JSON.stringify([r.class_id, r.code, r.course, r.topic, r.status, r.created_at || '', r.finished_at || '']).slice(1, -1).replace(/"/g, "'");
         const btn = done
           ? '<button type="button" onclick="viewReportClass(' + args + ')" class="shrink-0 bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Ver Reporte</button>'
           : '<button type="button" onclick="resumeClass(' + args + ')" class="shrink-0 bg-brand-blue text-white text-[10px] font-bold px-3 py-1.5 rounded-full">Reanudar</button>';
