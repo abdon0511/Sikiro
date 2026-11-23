@@ -1597,7 +1597,7 @@
       filterClasses();
     }
 
-    function viewReportClass(id, code, course, topic, status, createdAt, finishedAt) {
+    async function viewReportClass(id, code, course, topic, status, createdAt, finishedAt) {
       showToast('Cargando reporte...');
       const { data, error } = await supabaseClient.rpc('get_sikiro_stats', { p_class_id: id });
       if (error) { showToast('Error: ' + error.message); return; }
