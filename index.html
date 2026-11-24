@@ -1,25 +1,4 @@
-        .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
-          if (currentRole === 'student' && payload.payload && payload.payload.quiz) {
-            const quiz = payload.payload.quiz;
-            window._currentCheckpointQuiz = quiz;
-            const container = document.getElementById('checkpoint-questions-container');
-            if (container) {
-              container.innerHTML = quiz.map((q, i) => {
-                const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
-                const optsHtml = opts.map((o, j) => {
-                  const letter = String.fromCharCode(65 + j);
-                  return '<button type="button" onclick="selectCheckpointAnswer(' + i + ', \'' + letter + '\')" class="w-full text-left px-3 py-2 text-xs rounded-lg border border-slate-200 hover:border-brand-blue hover:bg-blue-50 transition checkpoint-opt" data-q="' + i + '" data-letter="' + letter + '">' + letter + ') ' + o + '</button>';
-                }).join('');
-                return '<div class="space-y-2">' +
-                  '<p class="text-sm font-bold text-slate-800">' + (i+1) + '. ' + q.question + '</p>' +
-                  '<div class="space-y-1">' + optsHtml + '</div>' +
-                '</div>';
-              }).join('');
-            }
-            const modal = document.getElementById('student-checkpoint-modal');
-            if (modal) modal.classList.remove('hidden');
-          }
-        })<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
