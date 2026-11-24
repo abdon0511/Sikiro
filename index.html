@@ -424,6 +424,15 @@
         <h3 class="font-display font-bold text-sm text-slate-900">Estudiantes Conectados</h3>
         <div id="teacher-roster-list" class="space-y-1 max-h-40 overflow-y-auto"></div>
       </div>
+
+      <div id="teacher-checkpoint-results" class="hidden space-y-3 pt-2">
+        <h3 class="font-display font-bold text-sm text-slate-900">Resultados del Checkpoint</h3>
+        <div id="checkpoint-results-summary" class="text-xs font-bold text-slate-600"></div>
+        <div id="checkpoint-results-bar" class="h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div id="checkpoint-results-fill" class="h-full rounded-full bg-brand-green" style="width:0%"></div>
+        </div>
+        <div id="checkpoint-results-list" class="space-y-1 max-h-60 overflow-y-auto"></div>
+      </div>
         <div id="teacher-anonymous-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1">
           <p class="text-xs text-slate-400 italic">No hay preguntas recibidas por el momento.</p>
         </div>
@@ -658,6 +667,7 @@
     let classFilter = 'all';
     let currentClass = {
       quiz: [],
+      checkpointAnswers: [],
       id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
       course: '',
       topic: '',
@@ -873,6 +883,14 @@
               }
             });
             showToast(allCorrect ? 'Todas correctas!' : 'Algunas respuestas incorrectas');
+          }
+        })
+        .on('broadcast', { event: 'CHECKPOINT_ANSWER' }, (payload) => {
+          if (currentRole === 'teacher' && payload.payload) {
+            const { question, answer, correct } = payload.payload;
+            if (!currentClass.checkpointAnswers) currentClass.checkpointAnswers = [];
+            currentClass.checkpointAnswers.push({ question, answer, correct });
+            updateCheckpointResults();
           }
         })
         .on('broadcast', { event: 'SHARED_DOUBT' }, (payload) => {
@@ -2217,6 +2235,31 @@
         };
         emocionBox.innerHTML = '<h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider pt-2">Estado Emocional</h4>' +
           row('😊 Bien', s.bien||0, '#22c55e') + row('😐 Neutral', s.neutral||0, '#94a3b8') + row('😤 Frustrado', s.frustrado||0, '#ef4444') + row('😴 Cansado', s.cansado||0, '#f59e0b') + row('🔥 Motivado', s.motivado||0, '#3b82f6');
+      }
+    }
+     function updateCheckpointResults() {
+      const answers = currentClass.checkpointAnswers || [];
+      const panel = document.getElementById('teacher-checkpoint-results');
+      const summary = document.getElementById('checkpoint-results-summary');
+      const fill = document.getElementById('checkpoint-results-fill');
+      const list = document.getElementById('checkpoint-results-list');
+      if (!panel) return;
+      if (answers.length === 0) { panel.classList.add('hidden'); return; }
+      panel.classList.remove('hidden');
+      const total = answers.length;
+      const correct = answers.filter((a) => a.correct).length;
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      if (summary) summary.innerText = 'Respondieron: ' + total + ' · Correctas: ' + correct + ' (' + pct + '%)';
+      if (fill) fill.style.width = pct + '%';
+      if (list) {
+        list.innerHTML = answers.map((a) => {
+          const icon = a.correct ? '✅' : '❌';
+          return '<div class="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">' +
+            '<span>' + icon + '</span>' +
+            '<span class="flex-1 truncate font-medium text-slate-700">' + escapeHtml(a.answer) + '</span>' +
+            '<span class="text-[10px] text-slate-400 truncate">' + escapeHtml(a.question).slice(0, 30) + '</span>' +
+          '</div>';
+        }).join('');
       }
     }
      function updateTeacherLiveStats() {
