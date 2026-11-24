@@ -765,8 +765,7 @@
             if (users.length > 0) {
               rosterBox.classList.remove('hidden');
               rosterList.innerHTML = users.map((u, i) => {
-                const name = u.user_id || ('Alumno ' + (i + 1));
-                return '<div class="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><span class="w-2 h-2 rounded-full bg-brand-green"></span><span class="font-medium text-slate-700">' + escapeHtml(name) + '</span></div>';
+                return '<div class="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><span class="w-2 h-2 rounded-full bg-brand-green"></span><span class="font-medium text-slate-700">Alumno ' + (i + 1) + '</span></div>';
               }).join('');
             } else {
               rosterBox.classList.add('hidden');
@@ -859,7 +858,7 @@
             // Solo los alumnos se registran en Presencia (el docente solo cuenta)
             if (currentRole === 'student') {
               registerLeaveOnUnload(); // ya no se usa para contar, queda como respaldo silencioso
-              const pid = ((teacherProfile || {}).email) || ('anon-' + Math.random().toString(36).slice(2));
+              const pid = 'anon-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
               liveChannel.track({ user_id: pid, online_at: new Date().toISOString() }).catch(() => {});
             }
             if (typeof onSubscribedCallback === 'function') {
