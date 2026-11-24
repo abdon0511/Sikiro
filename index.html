@@ -302,9 +302,13 @@
               </select>
             </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">Tema a Estudiar</label>
-            <input type="text" id="class-topic" placeholder="Ej. Ecuaciones Cuadráticas" class="w-full px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+                    <div class="border-t border-slate-200 pt-3 space-y-3">
+            <h4 class="font-display font-bold text-xs text-slate-700 uppercase tracking-wider">Cuestionario para Checkpoints</h4>
+            <p class="text-[10px] text-slate-500">Crea preguntas que se presentaran a los alumnos en cada checkpoint.</p>
+            <div id="quiz-builder" class="space-y-3"></div>
+            <button type="button" onclick="addQuizQuestion()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition border border-slate-200">
+              Agregar pregunta
+            </button>
           </div>
         </div>
         <button type="button" onclick="createAndStartClass()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
@@ -615,6 +619,7 @@
     let allMyClasses = [];
     let classFilter = 'all';
     let currentClass = {
+      quiz: [],
       id: null, // Aquí guardaremos el UUID de la clase creada en Supabase
       course: '',
       topic: '',
@@ -801,16 +806,21 @@
           }
         })
         .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
-          if (currentRole === 'student' && payload.payload && payload.payload.question) {
-            const q = payload.payload.question;
-            const opts = payload.payload.options || [];
-            const answer = opts.length > 0
-              ? prompt(q + '\n\nOpciones: ' + opts.join(', '))
-              : prompt(q);
-            if (answer !== null) {
-              if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { answer: answer.trim(), ts: Date.now() } });
-              showToast('Respuesta enviada');
-            }
+          if (currentRole === 'student' && payload.payload && payload.payload.quiz) {
+            const quiz = payload.payload.quiz;
+            let allCorrect = true;
+            quiz.forEach((q, i) => {
+              const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
+              const answer = opts.length > 0
+                ? prompt('Pregunta ' + (i+1) + ': ' + q.question + '\n\nOpciones: ' + opts.join(', '))
+                : prompt('Pregunta ' + (i+1) + ': ' + q.question);
+              if (answer !== null) {
+                const isCorrect = answer.trim().toUpperCase() === (q.correct || '').toUpperCase();
+                if (!isCorrect) allCorrect = false;
+                if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { question: q.question, answer: answer.trim(), correct: isCorrect, ts: Date.now() } });
+              }
+            });
+            showToast(allCorrect ? 'Todas correctas!' : 'Algunas respuestas incorrectas');
           }
         })
         .on('broadcast', { event: 'SHARED_DOUBT' }, (payload) => {
@@ -863,16 +873,16 @@
       liveChannel.send({ type: 'broadcast', event: 'FEEDBACK_REQUEST', payload: { ts: Date.now() } });
       showToast('📋 Feedback solicitado a la clase');
     }
-    // El docente envia un checkpoint con pregunta a los alumnos
+    // El docente envia un checkpoint con el quiz creado
     function teacherSendCheckpoint() {
-      const question = prompt('Escribe la pregunta del checkpoint:');
-      if (!question || !question.trim()) return;
-      const options = prompt('Opciones separadas por coma (dejar vacio para respuesta abierta):');
-      const opts = options ? options.split(',').map((o) => o.trim()).filter(Boolean) : [];
-      const type = opts.length > 0 ? 'multiple' : 'open';
+      const quiz = currentClass.quiz || [];
+      if (!quiz.length) {
+        showToast('No hay preguntas en el cuestionario. Agrega preguntas al crear la clase.');
+        return;
+      }
       if (!liveChannel) { showToast('No hay clase activa'); return; }
-      liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT', payload: { question: question.trim(), type, options: opts, ts: Date.now() } });
-      showToast('Checkpoint enviado a la clase');
+      liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT', payload: { quiz: quiz, ts: Date.now() } });
+      showToast('Checkpoint con ' + quiz.length + ' pregunta(s) enviado a la clase');
     }
 
     // El alumno reacciona al cambio de estado.
@@ -1254,6 +1264,8 @@
       currentClass.signals = { seguro: 0, parcial: 0, perdido: 0, lento: 0, adecuado: 0, rapido: 0 };
       currentClass.checkpoints = {};
       currentClass.currentCheckpoint = 1;
+      // Guardar quiz del builder
+      currentClass.quiz = getQuizFromBuilder();
       // Configuración de feedback
       const compSel = document.getElementById('config-comp');
       const paceSel = document.getElementById('config-pace');
@@ -2083,6 +2095,7 @@
     window.resumeClass = resumeClass;
     window.viewReportClass = viewReportClass;
     window.setClassFilter = setClassFilter;
+    window.addQuizQuestion = addQuizQuestion;
     window.filterClasses = filterClasses;
     </script>
 </body>
