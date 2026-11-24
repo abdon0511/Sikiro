@@ -1,4 +1,25 @@
-<!DOCTYPE html>
+        .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
+          if (currentRole === 'student' && payload.payload && payload.payload.quiz) {
+            const quiz = payload.payload.quiz;
+            window._currentCheckpointQuiz = quiz;
+            const container = document.getElementById('checkpoint-questions-container');
+            if (container) {
+              container.innerHTML = quiz.map((q, i) => {
+                const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
+                const optsHtml = opts.map((o, j) => {
+                  const letter = String.fromCharCode(65 + j);
+                  return '<button type="button" onclick="selectCheckpointAnswer(' + i + ', \'' + letter + '\')" class="w-full text-left px-3 py-2 text-xs rounded-lg border border-slate-200 hover:border-brand-blue hover:bg-blue-50 transition checkpoint-opt" data-q="' + i + '" data-letter="' + letter + '">' + letter + ') ' + o + '</button>';
+                }).join('');
+                return '<div class="space-y-2">' +
+                  '<p class="text-sm font-bold text-slate-800">' + (i+1) + '. ' + q.question + '</p>' +
+                  '<div class="space-y-1">' + optsHtml + '</div>' +
+                '</div>';
+              }).join('');
+            }
+            const modal = document.getElementById('student-checkpoint-modal');
+            if (modal) modal.classList.remove('hidden');
+          }
+        })<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -594,6 +615,18 @@
         <div class="flex gap-2">
           <input type="text" id="student-anonymous-question-input" maxlength="200" placeholder="Escribe tu duda sin revelar tu identidad... (máx. 200)" class="flex-1 px-4 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-green" />
           <button type="button" id="btn-send-question" onclick="studentSendAnonymousQuestion()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 text-xs rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">Enviar</button>
+        </div>
+              </div>
+      </div>
+
+      <!-- Modal de checkpoint -->
+      <div id="student-checkpoint-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+          <h3 class="font-display font-bold text-lg text-slate-900">Checkpoint</h3>
+          <div id="checkpoint-questions-container" class="space-y-4"></div>
+          <button type="button" id="btn-checkpoint-submit" onclick="submitCheckpointAnswers()" class="w-full bg-brand-blue hover:bg-brand-blueHover text-white font-bold py-3 rounded-xl text-xs transition shadow-md">
+            Enviar respuestas
+          </button>
         </div>
       </div>
     </section>
@@ -1905,6 +1938,36 @@
       });
     }
 
+    // Checkpoint modal helpers
+    window._checkpointAnswers = {};
+    function selectCheckpointAnswer(qIdx, letter) {
+      window._checkpointAnswers[qIdx] = letter;
+      // Highlight selected
+      document.querySelectorAll('.checkpoint-opt[data-q="' + qIdx + '"]').forEach((btn) => {
+        btn.classList.remove('bg-brand-blue', 'text-white', 'border-brand-blue');
+        if (btn.dataset.letter === letter) {
+          btn.classList.add('bg-brand-blue', 'text-white', 'border-brand-blue');
+        }
+      });
+    }
+    function submitCheckpointAnswers() {
+      const quiz = window._currentCheckpointQuiz || [];
+      const answers = window._checkpointAnswers || {};
+      quiz.forEach((q, i) => {
+        const letter = answers[i] || '';
+        const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
+        const idx = letter.charCodeAt(0) - 65;
+        const answer = (idx >= 0 && idx < opts.length) ? opts[idx] : letter;
+        const isCorrect = answer.trim().toUpperCase() === (q.correct || '').trim().toUpperCase();
+        if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { question: q.question, answer: answer, correct: isCorrect, ts: Date.now() } });
+      });
+      const modal = document.getElementById('student-checkpoint-modal');
+      if (modal) modal.classList.add('hidden');
+      window._checkpointAnswers = {};
+      showToast('Respuestas enviadas');
+    }
+    window.selectCheckpointAnswer = selectCheckpointAnswer;
+    window.submitCheckpointAnswers = submitCheckpointAnswers;
     async function studentSendSignal(kind, val) {
       if (!currentClass.id || !supabaseClient) {
         showToast('No estás en una clase.');
