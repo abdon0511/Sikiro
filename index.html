@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="logo.png" type="image/png">
   <title>Sikiro · Retroalimentación Académica en Tiempo Real</title>
 
   <!-- Tailwind CSS CDN -->
@@ -441,7 +442,7 @@
         <p id="report-meta" class="text-xs text-slate-500 mt-1">CÓDIGO: ---- · Duración: 00:00</p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-students" class="block font-display font-extrabold text-2xl text-brand-blue">0</span>
           <span class="text-[10px] font-bold text-slate-500 uppercase">Alumnos Conectados</span>
@@ -453,6 +454,10 @@
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-comprehension" class="block font-display font-extrabold text-2xl text-brand-amber">100%</span>
           <span class="text-[10px] font-bold text-slate-500 uppercase">Comprensión</span>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <span id="report-false-comp" class="block font-display font-extrabold text-2xl text-brand-rose">0%</span>
+          <span class="text-[10px] font-bold text-slate-500 uppercase">Falsa Comprensión</span>
         </div>
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
           <span id="report-pace" class="block font-display font-extrabold text-xl text-brand-green">Adecuado</span>
@@ -1426,6 +1431,9 @@
       const responded = seguro + parcial + perdido + lento + adecuado + rapido + bien + neutral + frustrado + cansado + motivado;
       set('report-responded', responded);
       set('report-comprehension', score + '%');
+      // Falsa comprension: estudiantes que dijeron entender pero el checkpoint score es bajo
+      const falseComp = totalComp > 0 && score < 60 ? (100 - score) : 0;
+      set('report-false-comp', falseComp + '%');
       set('report-pace', pace);
       set('report-questions-count', texts.length);
 
