@@ -818,6 +818,16 @@
                 const isCorrect = answer.trim().toUpperCase() === (q.correct || '').toUpperCase();
                 if (!isCorrect) allCorrect = false;
                 if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { question: q.question, answer: answer.trim(), correct: isCorrect, ts: Date.now() } });
+                // Guardar respuesta en Supabase (buscar question_id)
+                if (supabaseClient) {
+                  supabaseClient.rpc('get_quiz_questions', { p_class_id: currentClass.id }).then(({ data }) => {
+                    const qs = Array.isArray(data) ? data : [];
+                    const match = qs.find((qq) => qq.question === q.question);
+                    if (match && match.id) {
+                      supabaseClient.rpc('save_quiz_answer', { p_question_id: match.id, p_answer: answer.trim() }).catch(() => {});
+                    }
+                  }).catch(() => {});
+                }
               }
             });
             showToast(allCorrect ? 'Todas correctas!' : 'Algunas respuestas incorrectas');
@@ -1266,6 +1276,10 @@
       currentClass.currentCheckpoint = 1;
       // Guardar quiz del builder
       currentClass.quiz = getQuizFromBuilder();
+      // Guardar quiz en Supabase
+      if (currentClass.quiz.length && supabaseClient) {
+        supabaseClient.rpc('save_quiz_questions', { p_class_id: currentClass.id, p_questions: currentClass.quiz.map((q, i) => ({ question: q.question, type: q.type, options: q.options, correct: q.correct, timeLimit: q.timeLimit, order: i })) }).catch((e) => console.warn('save_quiz:', e.message));
+      }
       // Configuración de feedback
       const compSel = document.getElementById('config-comp');
       const paceSel = document.getElementById('config-pace');
