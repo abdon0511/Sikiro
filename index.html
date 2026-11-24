@@ -497,6 +497,12 @@
       </div>
 
       <div class="space-y-3 no-print">
+        <h3 class="font-display font-bold text-sm text-slate-900">Resultados del Cuestionario</h3>
+        <div id="report-quiz-results" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <p class="text-xs text-slate-400 italic">No hay datos del cuestionario.</p>
+        </div>
+      </div>
+      <div class="space-y-3 no-print">
         <h3 class="font-display font-bold text-sm text-slate-900">Preguntas Anónimas</h3>
         <div id="report-questions" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
       </div>
@@ -1380,6 +1386,7 @@
       // Guardar datos del reporte antes de limpiar la clase
       const reportData = {
         course: currentClass.course, topic: currentClass.topic, code: currentClass.code,
+        classId: currentClass.id,
         seconds: currentClass.secondsElapsed, stats: stats, fromFinish: true
       };
       currentClass.isStarted = false;
@@ -1447,7 +1454,7 @@
         return { cp: Number(k), seguro: seg, parcial: par, perdido: per, total: tot, score: sc };
       }).sort((a, b) => a.cp - b.cp);
 
-      lastReport = { course: report.course, topic: report.topic, code: report.code, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, bien, neutral, frustrado, cansado, motivado, questions: texts, checkpoints: cpEntries };
+      lastReport = { course: report.course, topic: report.topic, code: report.code, classId: report.classId, seconds: report.seconds, students, score, pace, seguro, parcial, perdido, lento, adecuado, rapido, bien, neutral, frustrado, cansado, motivado, questions: texts, checkpoints: cpEntries };
       const mm = String(Math.floor(report.seconds / 60)).padStart(2, '0');
       const ss = String(report.seconds % 60).padStart(2, '0');
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
@@ -1460,6 +1467,29 @@
       // Falsa comprension: estudiantes que dijeron entender pero el checkpoint score es bajo
       const falseComp = totalComp > 0 && score < 60 ? (100 - score) : 0;
       set('report-false-comp', falseComp + '%');
+      // Consultar resultados del quiz desde Supabase
+      if (supabaseClient && report.classId) {
+        supabaseClient.rpc('get_quiz_results', { p_class_id: report.classId }).then(({ data: quizData }) => {
+          if (Array.isArray(quizData) && quizData.length) {
+            const totalQ = quizData.reduce((a, q) => a + (q.total_answers || 0), 0);
+            const totalCorrect = quizData.reduce((a, q) => a + (q.correct_answers || 0), 0);
+            const totalFalse = quizData.reduce((a, q) => a + (q.false_comprehension || 0), 0);
+            const falsePct = totalQ > 0 ? Math.round((totalFalse / totalQ) * 100) : 0;
+            set('report-false-comp', falsePct + '%');
+            // Mostrar detalle por pregunta
+            const quizBox = document.getElementById('report-quiz-results');
+            if (quizBox) {
+              quizBox.innerHTML = quizData.map((q) => {
+                const pct = q.total_answers > 0 ? Math.round((q.correct_answers / q.total_answers) * 100) : 0;
+                return '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">' +
+                  '<p class="font-bold text-slate-800">' + escapeHtml(q.question) + '</p>' +
+                  '<p class="text-slate-500 mt-1">Respondieron: ' + q.total_answers + ' · Correctas: ' + q.correct_answers + ' (' + pct + '%) · Incorrectas: ' + q.false_comprehension + '</p>' +
+                '</div>';
+              }).join('');
+            }
+          }
+        }).catch(() => {});
+      }
       set('report-pace', pace);
       set('report-questions-count', texts.length);
 
@@ -1636,7 +1666,7 @@
       if (createdAt && finishedAt) seconds = Math.max(0, Math.round((new Date(finishedAt) - new Date(createdAt)) / 1000));
       // Usar los conteos locales solo si coinciden con esta clase
       const keepLocal = currentClass.id === id;
-      showTeacherReport({ course, topic, code, seconds, stats: data, _keepLocal: keepLocal, fromFinish: false });
+      showTeacherReport({ course, topic, code, classId: id, seconds, stats: data, _keepLocal: keepLocal, fromFinish: false });
       showScreen('teacher-report');
     }
     function resumeClass(id, code, course, topic, status) {
