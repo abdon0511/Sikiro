@@ -819,6 +819,11 @@
         })
         .on('broadcast', { event: 'FEEDBACK_REQUEST' }, (payload) => {
           if (currentRole === 'student') {
+            // Reactivar botones: limpiar cooldowns
+            ['comprension', 'ritmo', 'emocion'].forEach((kind) => {
+              localStorage.removeItem(signalStorageKey(kind));
+              setSignalGroupDisabled(kind, false);
+            });
             showToast('📋 El profesor solicita tu feedback');
           }
         })
