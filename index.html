@@ -857,35 +857,34 @@
             showToast('📋 El profesor solicita tu feedback');
           }
         })
-        .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
+                .on('broadcast', { event: 'CHECKPOINT' }, (payload) => {
           if (currentRole === 'student' && payload.payload && payload.payload.quiz) {
             const quiz = payload.payload.quiz;
-            let allCorrect = true;
-            quiz.forEach((q, i) => {
-              const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
-              const answer = opts.length > 0
-                ? prompt('Pregunta ' + (i+1) + ': ' + q.question + '\n\nOpciones: ' + opts.join(', '))
-                : prompt('Pregunta ' + (i+1) + ': ' + q.question);
-              if (answer !== null) {
-                const isCorrect = answer.trim().toUpperCase() === (q.correct || '').toUpperCase();
-                if (!isCorrect) allCorrect = false;
-                if (liveChannel) liveChannel.send({ type: 'broadcast', event: 'CHECKPOINT_ANSWER', payload: { question: q.question, answer: answer.trim(), correct: isCorrect, ts: Date.now() } });
-                // Guardar respuesta en Supabase (buscar question_id)
-                if (supabaseClient) {
-                  supabaseClient.rpc('get_quiz_questions', { p_class_id: currentClass.id }).then(({ data }) => {
-                    const qs = Array.isArray(data) ? data : [];
-                    const match = qs.find((qq) => qq.question === q.question);
-                    if (match && match.id) {
-                      supabaseClient.rpc('save_quiz_answer', { p_question_id: match.id, p_answer: answer.trim() }).then(() => {}).catch(() => {});
-                    }
-                  }).catch(() => {});
-                }
-              }
-            });
-            showToast(allCorrect ? 'Todas correctas!' : 'Algunas respuestas incorrectas');
+            window._currentCheckpointQuiz = quiz;
+            const container = document.getElementById('checkpoint-questions-container');
+            if (container) {
+              container.innerHTML = quiz.map((q, i) => {
+                const opts = q.type === 'boolean' ? ['Verdadero', 'Falso'] : (q.options || []);
+                const optsHtml = opts.map((o, j) => {
+                  const letter = String.fromCharCode(65 + j);
+                  return '<button type="button" onclick="selectCheckpointAnswer(' + i + ', \'' + letter + '\')" class="w-full text-left px-4 py-3 text-sm rounded-2xl border-2 border-slate-200 hover:border-brand-blue hover:bg-blue-50 transition checkpoint-opt font-medium" data-q="' + i + '" data-letter="' + letter + '">' +
+                    '<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-xs mr-3">' + letter + '</span>' +
+                    o +
+                  '</button>';
+                }).join('');
+                return '<div class="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">' +
+                  '<div class="flex items-center gap-2">' +
+                    '<span class="w-8 h-8 rounded-xl bg-brand-blue text-white flex items-center justify-center font-bold text-sm">' + (i+1) + '</span>' +
+                    '<p class="text-sm font-bold text-slate-900 flex-1">' + q.question + '</p>' +
+                  '</div>' +
+                  '<div class="space-y-2">' + optsHtml + '</div>' +
+                '</div>';
+              }).join('');
+            }
+            const modal = document.getElementById('student-checkpoint-modal');
+            if (modal) modal.classList.remove('hidden');
           }
-        })
-        .on('broadcast', { event: 'CHECKPOINT_ANSWER' }, (payload) => {
+        })        .on('broadcast', { event: 'CHECKPOINT_ANSWER' }, (payload) => {
           if (currentRole === 'teacher' && payload.payload) {
             const { question, answer, correct } = payload.payload;
             if (!currentClass.checkpointAnswers) currentClass.checkpointAnswers = [];
